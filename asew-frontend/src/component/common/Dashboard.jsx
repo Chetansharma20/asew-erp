@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import * as leadApi from '../../api/leadApi'
 import { getUserStats } from '../../api/userApi'
+import * as followupApi from '../../api/followupApi'
 
 const Dashboard = ({ role }) => {
     const [stats, setStats] = useState({ staffCount: 0, subAdminCount: 0 });
     const [leadStats, setLeadStats] = useState({ totalLeads: 0 });
+    const [upcomingFollowups, setUpcomingFollowups] = useState([]);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
+                // Admin/SubAdmin specific stats
                 if (role === 'Admin (Owner)' || role === 'Sub Admin') {
                     const [userData, leadData] = await Promise.all([
                         getUserStats(),
@@ -16,6 +19,12 @@ const Dashboard = ({ role }) => {
                     ]);
                     setStats(userData.data);
                     setLeadStats(leadData.data);
+                }
+
+                // Follow-ups (Also for Staff)
+                if (role === 'Admin (Owner)' || role === 'Sub Admin' || role === 'Staff') {
+                    const followupsData = await followupApi.getUpcomingFollowups();
+                    setUpcomingFollowups(followupsData.data || []);
                 }
             } catch (error) {
                 console.error("Failed to fetch dashboard stats:", error);
@@ -52,6 +61,57 @@ const Dashboard = ({ role }) => {
                     </>
                 )}
             </div>
+
+            {/* Upcoming Follow-ups Section */}
+            {(role === 'Admin (Owner)' || role === 'Sub Admin' || role === 'Staff') && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-6 border-b border-gray-100">
+                        <h3 className="font-bold text-gray-800 text-lg">Upcoming Follow-ups (Next 7 Days)</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50 border-b border-gray-100">
+                                <tr>
+                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Lead</th>
+                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Company</th>
+                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Follow-up Date</th>
+                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Remarks</th>
+                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Assigned To</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {upcomingFollowups.length > 0 ? (
+                                    upcomingFollowups.map((followup) => (
+                                        <tr key={followup._id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                                {followup.lead?.customer?.name || 'Unknown'}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">
+                                                {followup.lead?.customer?.companyName || '-'}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-blue-600 font-medium">
+                                                {new Date(followup.nextFollowupDate).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate" title={followup.remarks}>
+                                                {followup.remarks}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">
+                                                {followup.lead?.assignedTo?.name || '-'}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                                            No upcoming follow-ups found.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
 
         </div>

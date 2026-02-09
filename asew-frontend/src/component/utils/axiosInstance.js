@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create a centralized Axios instance
 const axiosInstance = axios.create({
-    baseURL: `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api`, // Fallback to localhost if env not set
+    baseURL: `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`, // Fallback to localhost if env not set
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',

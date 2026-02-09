@@ -78,10 +78,16 @@ export const getUpcomingFollowups = async (salesPersonId = null) => {
         const followups = await Followup.find(query)
             .populate({
                 path: 'lead',
-                populate: {
-                    path: 'assignedTo',
-                    select: 'name email'
-                }
+                populate: [
+                    {
+                        path: 'assignedTo',
+                        select: 'name email'
+                    },
+                    {
+                        path: 'customer',
+                        select: 'name companyName email contact'
+                    }
+                ]
             })
             .sort({ nextFollowupDate: 1 });
 

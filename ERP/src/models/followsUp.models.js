@@ -24,12 +24,13 @@ const followupSchema = new mongoose.Schema(
 
     orderStatus: {
       type: String,
-      enum: ["ORDER_WON", "ORDER_LOSS", "PRECLOSED"],
+      enum: ["ORDER_WON", "ORDER_LOSS", "PRECLOSED", "FOLLOW_UP"],
       required: true
     }
   },
   {
-    collection: "followups"
+    collection: "followups",
+    timestamps: true
   }
 );
 
