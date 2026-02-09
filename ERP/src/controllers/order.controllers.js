@@ -92,8 +92,8 @@ export const addPOToOrder = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { poNumber, poDate, poFile, poAmount } = req.body;
 
-    if (!poNumber || !poDate) {
-        throw new ApiError(400, "PO number and date are required");
+    if (!poDate) {
+        throw new ApiError(400, "PO date is required");
     }
 
     const poData = {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import * as quotationApi from '../../../api/quotationApi'
 import * as userApi from '../../../api/userApi'
+import * as orderApi from '../../../api/orderApi'
 import QuotationModal from './QuotationModal'
 
 const QuotationsManager = () => {
@@ -74,6 +75,19 @@ const QuotationsManager = () => {
         } catch (error) {
             console.error("Error updating status:", error);
             alert(error.message || "Failed to update status");
+        }
+    }
+
+    const handleConvertToOrder = async (quotationId) => {
+        if (!window.confirm("Are you sure you want to convert this quotation to an order?")) return;
+
+        try {
+            await orderApi.convertQuotationToOrder(quotationId);
+            alert("Quotation converted to order successfully!");
+            fetchInitialData(); // Refresh list to update status if needed
+        } catch (error) {
+            console.error("Error converting to order:", error);
+            alert(error.message || "Failed to convert to order");
         }
     }
 
@@ -215,6 +229,15 @@ const QuotationsManager = () => {
                                                         title="Edit"
                                                     >
                                                         Edit
+                                                    </button>
+                                                )}
+                                                {quotation.status === 'APPROVED' && (
+                                                    <button
+                                                        onClick={() => handleConvertToOrder(quotation._id)}
+                                                        className="text-green-600 hover:text-green-700 transition-colors text-sm font-medium"
+                                                        title="Convert to Order"
+                                                    >
+                                                        Convert to Order
                                                     </button>
                                                 )}
                                             </td>

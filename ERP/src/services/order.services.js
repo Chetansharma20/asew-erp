@@ -1,7 +1,7 @@
 import { Order } from "../models/order.model.js";
 import { Quotation } from "../models/quotation.models.js";
 import { Lead } from "../models/leads.models.js";
-import { generateOrderNumber } from "../utils/autoNumber.helper.js";
+import { generateOrderNumber, generatePONumber } from "../utils/autoNumber.helper.js";
 import { ApiError } from "../utils/ApiError.js";
 
 /**
@@ -13,7 +13,12 @@ import { ApiError } from "../utils/ApiError.js";
 export const convertQuotationToOrder = async (quotationId, convertedBy) => {
     try {
         const quotation = await Quotation.findById(quotationId)
-            .populate('leadId')
+            .populate({
+                path: 'leadId',
+                populate: {
+                    path: 'customer'
+                }
+            })
             .populate('quotationItems.itemId');
 
         if (!quotation) {
@@ -30,6 +35,10 @@ export const convertQuotationToOrder = async (quotationId, convertedBy) => {
             throw new ApiError(400, "Order already exists for this quotation");
         }
 
+        if (!quotation.leadId || !quotation.leadId.customer) {
+            throw new ApiError(400, "Lead or Customer information missing in quotation");
+        }
+
         // Generate order number
         const orderNo = await generateOrderNumber();
 
@@ -41,12 +50,20 @@ export const convertQuotationToOrder = async (quotationId, convertedBy) => {
             total: item.Total
         }));
 
+        const customerData = quotation.leadId.customer;
+
         // Create order
         const order = await Order.create({
             orderNo,
             lead: quotation.leadId._id,
             quotation: quotationId,
-            customer: quotation.leadId.customer,
+            customer: {
+                name: customerData.name,
+                contact: customerData.contact,
+                email: customerData.email,
+                companyName: customerData.companyName,
+                address: customerData.address
+            },
             salesPerson: quotation.salesPersonId,
             orderItems,
             totalAmount: quotation.totalAmount,
@@ -227,8 +244,11 @@ export const addPOToOrder = async (orderId, poData, punchedBy) => {
             throw new ApiError(400, "Cannot add PO to cancelled order");
         }
 
+        // Auto-generate PO number if not provided
+        const poNumber = poData.poNumber || await generatePONumber();
+
         order.poDetails = {
-            poNumber: poData.poNumber,
+            poNumber: poNumber,
             poDate: poData.poDate,
             poFile: poData.poFile,
             poAmount: poData.poAmount,

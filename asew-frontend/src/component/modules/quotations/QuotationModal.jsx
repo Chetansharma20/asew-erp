@@ -69,6 +69,7 @@ const QuotationModal = ({ isOpen, onClose, selectedLead = null, initialQuotation
         try {
             // For edit/view, we might need all leads, but typically we just need the one in the quotation
             // For create, we filter by QUALIFIED
+            // For create, we filter by QUALIFIED
             const leadParams = mode === 'create' ? { status: 'QUALIFIED' } : {};
 
             const [leadsRes, itemsRes] = await Promise.all([

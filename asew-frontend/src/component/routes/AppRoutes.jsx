@@ -13,6 +13,7 @@ import QuotationsManager from '../modules/quotations/QuotationsManager'
 import RegisterUser from '../modules/users/RegisterUser'
 import UsersList from '../modules/users/UsersList'
 import CustomersManager from '../modules/customers/CustomersManager'
+import OrdersManager from '../modules/orders/OrdersManager'
 
 
 const AppRoutes = () => {
@@ -31,6 +32,7 @@ const AppRoutes = () => {
                 <Route path="customers" element={<CustomersManager />} />
                 <Route path="register-user" element={<RegisterUser />} />
                 <Route path="users" element={<UsersList />} />
+                <Route path="orders" element={<OrdersManager />} />
             </Route>
 
             {/* Super Admin Routes */}
@@ -48,6 +50,7 @@ const AppRoutes = () => {
                 <Route path="items" element={<ItemsManager />} />
                 <Route path="leads" element={<LeadsManager />} />
                 <Route path="quotations" element={<QuotationsManager />} />
+                <Route path="orders" element={<OrdersManager />} />
                 <Route path="customers" element={<CustomersManager />} />
                 <Route path="register-user" element={<RegisterUser />} />
                 <Route path="users" element={<UsersList />} />
@@ -58,6 +61,7 @@ const AppRoutes = () => {
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard role="Staff" />} />
                 <Route path="quotations" element={<QuotationsManager />} />
+                <Route path="orders" element={<OrdersManager />} />
                 <Route path="leads" element={<LeadsManager />} />
             </Route>
         </Routes>

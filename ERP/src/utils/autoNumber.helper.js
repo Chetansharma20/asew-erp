@@ -62,3 +62,33 @@ export const generateQuotationNumber = async () => {
 export const generateOrderNumber = async () => {
     return await generateAutoNumber(Order, 'ORD', 'orderNo');
 };
+
+/**
+ * Generate PO Number
+ * @returns {Promise<string>} - PO number (e.g., PO-2026-001)
+ */
+export const generatePONumber = async () => {
+    // Custom logic for PO because it's an embedded field
+    const currentYear = new Date().getFullYear();
+    const prefix = 'PO';
+    const searchPattern = `${prefix}-${currentYear}-`;
+
+    // Find the last order with a PO number matching the current year pattern
+    const lastDoc = await Order.findOne({
+        'poDetails.poNumber': { $regex: `^${searchPattern}` }
+    })
+        .sort({ 'poDetails.poNumber': -1 })
+        .select('poDetails.poNumber');
+
+    let nextNumber = 1;
+
+    if (lastDoc && lastDoc.poDetails && lastDoc.poDetails.poNumber) {
+        const lastNumberPart = lastDoc.poDetails.poNumber.split('-')[2];
+        if (lastNumberPart) {
+            nextNumber = parseInt(lastNumberPart) + 1;
+        }
+    }
+
+    const formattedNumber = String(nextNumber).padStart(3, '0');
+    return `${prefix}-${currentYear}-${formattedNumber}`;
+};

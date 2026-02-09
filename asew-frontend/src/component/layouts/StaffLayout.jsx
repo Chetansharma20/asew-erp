@@ -8,6 +8,7 @@ const StaffLayout = () => {
         { label: 'Dashboard', path: '/staff/dashboard', icon: '📊' },
         { label: 'Leads', path: '/staff/leads', icon: '👥' },
         { label: 'Quotations', path: '/staff/quotations', icon: '📝' },
+        { label: 'Orders', path: '/staff/orders', icon: '📦' },
     ]
 
 
