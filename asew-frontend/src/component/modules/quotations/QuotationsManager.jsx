@@ -43,7 +43,8 @@ const QuotationsManager = () => {
             CREATED: 'bg-gray-100 text-gray-800',
             SENT: 'bg-blue-100 text-blue-800',
             APPROVED: 'bg-green-100 text-green-800',
-            REJECTED: 'bg-red-100 text-red-800'
+            REJECTED: 'bg-red-100 text-red-800',
+            CONVERTED: 'bg-purple-100 text-purple-800'
         }
         return colors[status] || 'bg-gray-100 text-gray-800'
     }
@@ -114,7 +115,7 @@ const QuotationsManager = () => {
             {/* Filters */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div className="flex gap-2">
-                    {['ALL', 'CREATED', 'SENT', 'APPROVED', 'REJECTED'].map(status => (
+                    {['ALL', 'CREATED', 'SENT', 'APPROVED', 'REJECTED', 'CONVERTED'].map(status => (
                         <button
                             key={status}
                             onClick={() => setFilterStatus(status)}
@@ -204,11 +205,13 @@ const QuotationsManager = () => {
                                                     onChange={(e) => handleStatusChange(quotation._id, e.target.value)}
                                                     className={`text-xs font-medium rounded-full px-2.5 py-0.5 border-0 focus:ring-2 focus:ring-blue-500 cursor-pointer ${getStatusBadgeColor(quotation.status)}`}
                                                     onClick={(e) => e.stopPropagation()} // Prevent row click if any
+                                                    disabled={quotation.status === 'CONVERTED'}
                                                 >
                                                     <option value="CREATED">CREATED</option>
                                                     <option value="SENT">SENT</option>
                                                     <option value="APPROVED">APPROVED</option>
                                                     <option value="REJECTED">REJECTED</option>
+                                                    <option value="CONVERTED">CONVERTED</option>
                                                 </select>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-500">

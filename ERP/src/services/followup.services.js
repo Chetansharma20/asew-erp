@@ -93,8 +93,11 @@ export const getUpcomingFollowups = async (salesPersonId = null) => {
 
         // Filter by sales person if provided
         if (salesPersonId) {
+            const userIdStr = salesPersonId.toString();
             return followups.filter(f =>
-                f.lead.assignedTo && f.lead.assignedTo._id.toString() === salesPersonId
+                f.lead &&
+                f.lead.assignedTo &&
+                f.lead.assignedTo._id.toString() === userIdStr
             );
         }
 

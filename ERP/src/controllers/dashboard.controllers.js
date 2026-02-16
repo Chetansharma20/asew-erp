@@ -70,3 +70,18 @@ export const getFollowupReminders = asyncHandler(async (req, res) => {
         new ApiResponse(200, reminders, "Follow-up reminders fetched successfully")
     );
 });
+
+/**
+ * Get dashboard statistics
+ * GET /api/dashboard/stats
+ */
+export const getDashboardStats = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+    const userRole = req.user.role;
+
+    const stats = await dashboardService.getDashboardStats(userId, userRole);
+
+    return res.status(200).json(
+        new ApiResponse(200, stats, "Dashboard statistics fetched successfully")
+    );
+});

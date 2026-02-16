@@ -19,4 +19,7 @@ router.get("/orders", dashboardController.getOrderDashboard);
 // Get follow-up reminders
 router.get("/reminders", dashboardController.getFollowupReminders);
 
+// Get dashboard statistics
+router.get("/stats", dashboardController.getDashboardStats);
+
 export default router;

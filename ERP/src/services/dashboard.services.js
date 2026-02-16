@@ -288,3 +288,51 @@ export const getFollowupReminders = async (salesPersonId = null) => {
         throw new ApiError(500, `Error fetching follow-up reminders: ${error.message}`);
     }
 };
+
+/**
+ * Get dashboard statistics (leads, quotations, orders counts)
+ * @param {string} userId - User ID
+ * @param {string} userRole - User role (STAFF, ADMIN, SUB_ADMIN)
+ * @returns {Promise<Object>} - Dashboard statistics
+ */
+export const getDashboardStats = async (userId, userRole) => {
+    try {
+        let leadsCount = 0;
+        let quotationsCount = 0;
+        let ordersCount = 0;
+
+        if (userRole === "STAFF") {
+            // For staff, count only their assigned items
+            leadsCount = await Lead.countDocuments({
+                assignedTo: userId,
+                isActive: true
+            });
+
+            const { Quotation } = await import("../models/quotation.models.js");
+            quotationsCount = await Quotation.countDocuments({
+                salesPersonId: userId
+            });
+
+            ordersCount = await Order.countDocuments({
+                salesPerson: userId
+            });
+        } else if (userRole === "ADMIN" || userRole === "SUB_ADMIN") {
+            // For admin and sub-admin, count all items
+            leadsCount = await Lead.countDocuments({ isActive: true });
+
+            const { Quotation } = await import("../models/quotation.models.js");
+            quotationsCount = await Quotation.countDocuments({});
+
+            ordersCount = await Order.countDocuments({});
+        }
+
+        return {
+            leadsCount,
+            quotationsCount,
+            ordersCount
+        };
+
+    } catch (error) {
+        throw new ApiError(500, `Error fetching dashboard stats: ${error.message}`);
+    }
+};

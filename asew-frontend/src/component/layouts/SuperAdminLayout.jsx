@@ -2,13 +2,14 @@ import React from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../common/Sidebar'
 import Header from '../common/Header'
+import { LayoutDashboard, Users, ShoppingCart, FileText } from 'lucide-react'
 
 const SuperAdminLayout = () => {
     const menuItems = [
-        { label: 'Dashboard', path: '/super-admin/dashboard', icon: '📊' },
-        { label: 'Users', path: '/super-admin/users', icon: '👥' },
-        { label: 'Orders', path: '/super-admin/orders', icon: '📦' },
-        { label: 'Quotations', path: '/super-admin/quotations', icon: '📝' },
+        { label: 'Dashboard', path: '/super-admin/dashboard', icon: <LayoutDashboard size={20} /> },
+        { label: 'Users', path: '/super-admin/users', icon: <Users size={20} /> },
+        { label: 'Orders', path: '/super-admin/orders', icon: <ShoppingCart size={20} /> },
+        { label: 'Quotations', path: '/super-admin/quotations', icon: <FileText size={20} /> },
     ]
 
 

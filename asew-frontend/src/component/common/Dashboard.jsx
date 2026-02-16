@@ -1,16 +1,39 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import * as leadApi from '../../api/leadApi'
 import { getUserStats } from '../../api/userApi'
 import * as followupApi from '../../api/followupApi'
+import * as dashboardApi from '../../api/dashboardApi'
 
 const Dashboard = ({ role }) => {
     const [stats, setStats] = useState({ staffCount: 0, subAdminCount: 0 });
     const [leadStats, setLeadStats] = useState({ totalLeads: 0 });
     const [upcomingFollowups, setUpcomingFollowups] = useState([]);
+    const [dashboardStats, setDashboardStats] = useState({ leadsCount: 0, quotationsCount: 0, ordersCount: 0 });
+    const navigate = useNavigate()
+
+    const getRoleBasePath = () => {
+        switch (role) {
+            case 'Admin (Owner)': return '/admin'
+            case 'Super Admin': return '/super-admin'
+            case 'Sub Admin': return '/sub-admin'
+            case 'Staff': return '/staff'
+            default: return '/'
+        }
+    }
+
+    const handleCardClick = (path) => {
+        const basePath = getRoleBasePath()
+        navigate(`${basePath}/${path}`)
+    }
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
+                // Dashboard stats (for all roles)
+                const dashStats = await dashboardApi.getDashboardStats();
+                setDashboardStats(dashStats.data || { leadsCount: 0, quotationsCount: 0, ordersCount: 0 });
+
                 // Admin/SubAdmin specific stats
                 if (role === 'Admin (Owner)' || role === 'Sub Admin') {
                     const [userData, leadData] = await Promise.all([
@@ -35,28 +58,49 @@ const Dashboard = ({ role }) => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            {/* <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-800">Welcome to the {role} Dashboard</h2>
                 <p className="mt-2 text-gray-500 text-lg">You have successfully logged in as {role}.</p>
-            </div>
+            </div> */}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(role === 'Admin (Owner)' || role === 'Sub Admin') && (
+                {/* Stats for all roles */}
+                <div
+                    onClick={() => handleCardClick('leads')}
+                    className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transform hover:scale-105 transition-transform duration-200 cursor-pointer"
+                >
+                    <h3 className="font-semibold text-gray-700">{role === 'Staff' ? 'My Leads' : 'Total Leads'}</h3>
+                    <p className="text-3xl font-bold text-blue-600 mt-2">{dashboardStats.leadsCount}</p>
+                    <p className="text-sm text-gray-400 mt-1">{role === 'Staff' ? 'Assigned to me' : 'All Leads'}</p>
+                </div>
+                <div
+                    onClick={() => handleCardClick('quotations')}
+                    className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transform hover:scale-105 transition-transform duration-200 cursor-pointer"
+                >
+                    <h3 className="font-semibold text-gray-700">{role === 'Staff' ? 'My Quotations' : 'Total Quotations'}</h3>
+                    <p className="text-3xl font-bold text-green-600 mt-2">{dashboardStats.quotationsCount}</p>
+                    <p className="text-sm text-gray-400 mt-1">{role === 'Staff' ? 'Created by me' : 'All Quotations'}</p>
+                </div>
+                <div
+                    onClick={() => handleCardClick('orders')}
+                    className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transform hover:scale-105 transition-transform duration-200 cursor-pointer"
+                >
+                    <h3 className="font-semibold text-gray-700">{role === 'Staff' ? 'My Orders' : 'Total Orders'}</h3>
+                    <p className="text-3xl font-bold text-purple-600 mt-2">{dashboardStats.ordersCount}</p>
+                    <p className="text-sm text-gray-400 mt-1">{role === 'Staff' ? 'Handled by me' : 'All Orders'}</p>
+                </div>
+
+                {/* Admin/SubAdmin specific stats */}
+                {/* Admin/SubAdmin specific stats */}
+                {(role === 'Admin (Owner)') && (
                     <>
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transform hover:scale-105 transition-transform duration-200">
-                            <h3 className="font-semibold text-gray-700">Total Leads</h3>
-                            <p className="text-3xl font-bold text-blue-600 mt-2">{leadStats.totalLeads}</p>
-                            <p className="text-sm text-gray-400 mt-1">Acquired Leads</p>
-                        </div>
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transform hover:scale-105 transition-transform duration-200">
+                        <div
+                            onClick={() => handleCardClick('users')}
+                            className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transform hover:scale-105 transition-transform duration-200 cursor-pointer"
+                        >
                             <h3 className="font-semibold text-gray-700">Total Staff</h3>
-                            <p className="text-3xl font-bold text-green-600 mt-2">{stats.staffCount || 0}</p>
-                            <p className="text-sm text-gray-400 mt-1">Active Staff Members</p>
-                        </div>
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transform hover:scale-105 transition-transform duration-200">
-                            <h3 className="font-semibold text-gray-700">Total Sub Admins</h3>
-                            <p className="text-3xl font-bold text-purple-600 mt-2">{stats.subAdminCount || 0}</p>
-                            <p className="text-sm text-gray-400 mt-1">Active Sub Admins</p>
+                            <p className="text-3xl font-bold text-orange-600 mt-2">{(stats.staffCount || 0) + (stats.subAdminCount || 0)}</p>
+                            <p className="text-sm text-gray-400 mt-1">Active Staff & Sub Admins</p>
                         </div>
                     </>
                 )}

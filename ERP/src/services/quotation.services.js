@@ -303,8 +303,9 @@ export const updateQuotation = async (quotationId, updateData) => {
  */
 export const updateQuotationStatus = async (quotationId, status) => {
     try {
-        if (!["APPROVED", "REJECTED"].includes(status)) {
-            throw new ApiError(400, "Invalid status. Must be APPROVED or REJECTED");
+        const validStatuses = ["CREATED", "SENT", "APPROVED", "REJECTED", "CONVERTED"];
+        if (!validStatuses.includes(status)) {
+            throw new ApiError(400, `Invalid status. Must be one of: ${validStatuses.join(', ')}`);
         }
 
         const quotation = await Quotation.findById(quotationId);
@@ -312,8 +313,10 @@ export const updateQuotationStatus = async (quotationId, status) => {
             throw new ApiError(404, "Quotation not found");
         }
 
-        if (quotation.status !== "SENT") {
-            throw new ApiError(400, `Cannot update status. Current status: ${quotation.status}`);
+        // Only allow manual status changes for SENT quotations (to APPROVED/REJECTED)
+        // CONVERTED status is set automatically by the system
+        if (quotation.status !== "SENT" && status !== "CONVERTED") {
+            throw new ApiError(400, `Cannot update status. Quotation must be SENT to change to APPROVED/REJECTED. Current status: ${quotation.status}`);
         }
 
         quotation.status = status;

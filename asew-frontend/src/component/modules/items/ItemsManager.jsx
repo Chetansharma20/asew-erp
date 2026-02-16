@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { getAllItems, createItem, updateItem, deleteItem } from '../../../api/itemApi'
+import { Link, useLocation } from 'react-router-dom'
+import { getAllItems, createItem, updateItem, deleteItem, getItemById } from '../../../api/itemApi'
 import { toast } from 'react-hot-toast'
 
+
 const ItemsManager = () => {
+    const location = useLocation()
     const [items, setItems] = useState([])
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+    const [viewItem, setViewItem] = useState(null)
+    const [viewLoading, setViewLoading] = useState(false)
     const [currentItem, setCurrentItem] = useState(null) // null for add, object for edit
 
     const [formData, setFormData] = useState({
@@ -101,6 +107,32 @@ const ItemsManager = () => {
         }
     }
 
+
+    const handleViewDetails = async (id) => {
+        setIsViewModalOpen(true)
+        setViewLoading(true)
+        try {
+            const response = await getItemById(id)
+            if (response.success) {
+                setViewItem(response.data)
+            } else {
+                toast.error(response.message || 'Failed to fetch item details')
+                setIsViewModalOpen(false)
+            }
+        } catch (error) {
+            console.error('Error fetching item details:', error)
+            toast.error('Failed to load item details')
+            setIsViewModalOpen(false)
+        } finally {
+            setViewLoading(false)
+        }
+    }
+
+    const closeViewModal = () => {
+        setIsViewModalOpen(false)
+        setViewItem(null)
+    }
+
     if (loading) {
         return <div className="flex justify-center items-center h-64">Loading...</div>
     }
@@ -133,8 +165,21 @@ const ItemsManager = () => {
                             {items.length > 0 ? (
                                 items.map((item) => (
                                     <tr key={item._id} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.name}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{item.description}</td>
+                                        <td className="px-6 py-4 text-sm font-medium">
+                                            <Link
+                                                to={`${location.pathname}/${item._id}`}
+                                                className="text-gray-900 hover:text-gray-600 transition-colors"
+                                            >
+                                                {item.name}
+                                            </Link>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            <Link to={`${location.pathname}/${item._id}`} className="hover:text-gray-700 block">
+                                                {item.description?.length > 50
+                                                    ? `${item.description.substring(0, 50)}...`
+                                                    : item.description}
+                                            </Link>
+                                        </td>
                                         <td className="px-6 py-4 text-sm text-gray-700">₹{item.basePrice}</td>
                                         <td className="px-6 py-4 text-sm">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -148,6 +193,7 @@ const ItemsManager = () => {
                                             >
                                                 Edit
                                             </button>
+
                                             <button
                                                 onClick={() => handleDelete(item._id)}
                                                 className="text-red-500 hover:text-red-700 text-sm font-medium"
@@ -239,6 +285,63 @@ const ItemsManager = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* View Details Modal */}
+            {isViewModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 animate-in fade-in zoom-in duration-200">
+                        <h3 className="text-xl font-bold text-gray-900 mb-6 border-b pb-3">
+                            Product Details
+                        </h3>
+
+                        {viewLoading ? (
+                            <div className="flex justify-center items-center h-40">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            </div>
+                        ) : viewItem ? (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="text-gray-500 font-medium">Name:</div>
+                                    <div className="col-span-2 text-gray-900 font-medium">{viewItem.name}</div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="text-gray-500 font-medium">Description:</div>
+                                    <div className="col-span-2 text-gray-700 whitespace-pre-wrap">{viewItem.description}</div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="text-gray-500 font-medium">Base Price:</div>
+                                    <div className="col-span-2 text-gray-900">₹{viewItem.basePrice}</div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="text-gray-500 font-medium">Status:</div>
+                                    <div className="col-span-2">
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${viewItem.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                            {viewItem.isActive ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </div>
+                                </div>
+                                {viewItem.quantity && (
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="text-gray-500 font-medium">Quantity:</div>
+                                        <div className="col-span-2 text-gray-900">{viewItem.quantity}</div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6 text-gray-500">Item not found</div>
+                        )}
+
+                        <div className="mt-8 flex justify-end">
+                            <button
+                                onClick={closeViewModal}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

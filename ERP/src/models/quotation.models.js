@@ -57,7 +57,7 @@ const quotationSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["CREATED", "SENT", "APPROVED", "REJECTED"],
+            enum: ["CREATED", "SENT", "APPROVED", "REJECTED", "CONVERTED"],
             default: "CREATED"
         },
         totalAmount: {

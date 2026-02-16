@@ -75,6 +75,11 @@ export const convertQuotationToOrder = async (quotationId, convertedBy) => {
             status: "CONVERTED_TO_ORDER"
         });
 
+        // Update quotation status to CONVERTED
+        await Quotation.findByIdAndUpdate(quotationId, {
+            status: "CONVERTED"
+        });
+
         return await Order.findById(order._id)
             .populate('lead')
             .populate('quotation')

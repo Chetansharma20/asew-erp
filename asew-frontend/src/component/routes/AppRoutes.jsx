@@ -8,6 +8,7 @@ import StaffLayout from '../layouts/StaffLayout'
 import AdminLayout from '../layouts/AdminLayout'
 import Dashboard from '../common/Dashboard'
 import ItemsManager from '../modules/items/ItemsManager'
+import ItemDetails from '../modules/items/ItemDetails'
 import LeadsManager from '../modules/leads/LeadsManager'
 import QuotationsManager from '../modules/quotations/QuotationsManager'
 import RegisterUser from '../modules/users/RegisterUser'
@@ -29,6 +30,7 @@ const AppRoutes = () => {
                 <Route path="leads" element={<LeadsManager />} />
                 <Route path="quotations" element={<QuotationsManager />} />
                 <Route path="items" element={<ItemsManager />} />
+                <Route path="items/:id" element={<ItemDetails />} />
                 <Route path="customers" element={<CustomersManager />} />
                 <Route path="register-user" element={<RegisterUser />} />
                 <Route path="users" element={<UsersList />} />
@@ -48,6 +50,7 @@ const AppRoutes = () => {
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard role="Sub Admin" />} />
                 <Route path="items" element={<ItemsManager />} />
+                <Route path="items/:id" element={<ItemDetails />} />
                 <Route path="leads" element={<LeadsManager />} />
                 <Route path="quotations" element={<QuotationsManager />} />
                 <Route path="orders" element={<OrdersManager />} />
