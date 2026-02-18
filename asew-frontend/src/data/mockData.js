@@ -22,7 +22,7 @@ export const initialLeads = [
             name: 'Ramesh Verma',
             phone: '+91 98765 43210',
             email: 'ramesh@example.com',
-            companyName: 'Verma Enterprises',
+            contactPerson: 'Verma Enterprises',
             address: '123 MG Road, Mumbai'
         },
         interestedIn: [
@@ -40,7 +40,7 @@ export const initialLeads = [
             name: 'Sunita Desai',
             phone: '+91 87654 32109',
             email: 'sunita@example.com',
-            companyName: 'Desai Motors',
+            contactPerson: 'Desai Motors',
             address: '456 Park Street, Delhi'
         },
         interestedIn: [
@@ -58,7 +58,7 @@ export const initialLeads = [
             name: 'Anil Kapoor',
             phone: '+91 76543 21098',
             email: 'anil@example.com',
-            companyName: null,
+            contactPerson: null,
             address: '789 Brigade Road, Bangalore'
         },
         interestedIn: [

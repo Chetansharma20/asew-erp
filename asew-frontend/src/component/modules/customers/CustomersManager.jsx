@@ -12,7 +12,7 @@ const CustomersManager = () => {
         name: '',
         email: '',
         contact: '',
-        companyName: '',
+        contactPerson: '',
         address: ''
     })
 
@@ -56,7 +56,7 @@ const CustomersManager = () => {
                 name: '',
                 email: '',
                 contact: '',
-                companyName: '',
+                contactPerson: '',
                 address: ''
             })
         }
@@ -134,7 +134,7 @@ const CustomersManager = () => {
                         <thead className="bg-gray-50 border-b border-gray-100">
                             <tr>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Company</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact Person</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
@@ -160,7 +160,7 @@ const CustomersManager = () => {
                                             <div className="text-sm font-medium text-gray-900">{customer.name}</div>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-600">
-                                            {customer.companyName || '-'}
+                                            {customer.contactPerson || '-'}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-600">
                                             {customer.contact}
@@ -244,12 +244,12 @@ const CustomersManager = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
                                 <input
                                     type="text"
-                                    name="companyName"
+                                    name="contactPerson"
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={formData.companyName}
+                                    value={formData.contactPerson}
                                     onChange={handleInputChange}
                                 />
                             </div>

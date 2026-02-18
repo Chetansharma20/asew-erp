@@ -87,9 +87,8 @@ export const createQuotation = async (leadId, quotationData, salesPersonId) => {
             status: "CREATED"
         });
 
-        // Update lead status to QUOTATION_SENT
-        lead.status = "QUOTATION_SENT";
-        await lead.save();
+        // Lead stays at QUALIFIED until the quotation is explicitly sent to the client
+        // (the sendQuotation function handles advancing the status)
 
         return await Quotation.findById(quotation._id)
             .populate('leadId')

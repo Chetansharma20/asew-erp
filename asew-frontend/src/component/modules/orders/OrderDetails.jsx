@@ -205,7 +205,7 @@ const OrderDetails = ({ isOpen, onClose, orderId, onUpdate }) => {
                                     <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Customer Details</h4>
                                     <div className="bg-gray-50 p-4 rounded-lg">
                                         <p className="font-medium text-gray-900">{order.customer?.name}</p>
-                                        <p className="text-gray-600 text-sm">{order.customer?.companyName}</p>
+                                        <p className="text-gray-600 text-sm">{order.customer?.contactPerson}</p>
                                         <p className="text-gray-600 text-sm mt-2">{order.customer?.email}</p>
                                         <p className="text-gray-600 text-sm">{order.customer?.contact}</p>
                                         <p className="text-gray-600 text-sm mt-1">{order.customer?.address}</p>

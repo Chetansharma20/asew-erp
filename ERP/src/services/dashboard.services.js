@@ -2,6 +2,7 @@ import { Lead } from "../models/leads.models.js";
 import { Order } from "../models/order.model.js";
 import { Followup } from "../models/followsUp.models.js";
 import { ApiError } from "../utils/ApiError.js";
+import mongoose from "mongoose";
 
 /**
  * Get lead statistics
@@ -12,45 +13,50 @@ export const getLeadStatistics = async (dateRange = {}) => {
     try {
         const { dateFrom, dateTo } = dateRange;
 
-        let dateFilter = {};
+        let matchStage = { isActive: true };
+
         if (dateFrom || dateTo) {
-            dateFilter.leadDate = {};
-            if (dateFrom) dateFilter.leadDate.$gte = new Date(dateFrom);
-            if (dateTo) dateFilter.leadDate.$lte = new Date(dateTo);
+            matchStage.leadDate = {};
+            if (dateFrom) matchStage.leadDate.$gte = new Date(dateFrom);
+            if (dateTo) matchStage.leadDate.$lte = new Date(dateTo);
         }
 
-        // Count by status
-        const statusCounts = await Lead.aggregate([
-            { $match: { isActive: true, ...dateFilter } },
+        const result = await Lead.aggregate([
+            { $match: matchStage },
             {
-                $group: {
-                    _id: "$status",
-                    count: { $sum: 1 }
+                $facet: {
+                    totalLeads: [
+                        { $count: "count" }
+                    ],
+                    byStatus: [
+                        {
+                            $group: {
+                                _id: "$status",
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ],
+                    bySource: [
+                        {
+                            $group: {
+                                _id: "$source",
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ]
                 }
             }
         ]);
 
-        // Count by source
-        const sourceCounts = await Lead.aggregate([
-            { $match: { isActive: true, ...dateFilter } },
-            {
-                $group: {
-                    _id: "$source",
-                    count: { $sum: 1 }
-                }
-            }
-        ]);
-
-        // Total leads
-        const totalLeads = await Lead.countDocuments({ isActive: true, ...dateFilter });
+        const data = result[0];
 
         return {
-            totalLeads,
-            byStatus: statusCounts.reduce((acc, item) => {
+            totalLeads: data.totalLeads[0]?.count || 0,
+            byStatus: data.byStatus.reduce((acc, item) => {
                 acc[item._id] = item.count;
                 return acc;
             }, {}),
-            bySource: sourceCounts.reduce((acc, item) => {
+            bySource: data.bySource.reduce((acc, item) => {
                 acc[item._id] = item.count;
                 return acc;
             }, {})
@@ -71,91 +77,92 @@ export const getSalesMetrics = async (dateRange = {}, salesPersonId = null) => {
     try {
         const { dateFrom, dateTo } = dateRange;
 
-        let dateFilter = {};
+        let matchStage = {};
+
         if (dateFrom || dateTo) {
-            dateFilter.orderDate = {};
-            if (dateFrom) dateFilter.orderDate.$gte = new Date(dateFrom);
-            if (dateTo) dateFilter.orderDate.$lte = new Date(dateTo);
+            matchStage.orderDate = {};
+            if (dateFrom) matchStage.orderDate.$gte = new Date(dateFrom);
+            if (dateTo) matchStage.orderDate.$lte = new Date(dateTo);
         }
 
-        let matchFilter = { ...dateFilter };
         if (salesPersonId) {
-            matchFilter.salesPerson = salesPersonId;
+            matchStage.salesPerson = new mongoose.Types.ObjectId(salesPersonId);
         }
 
-        // Total orders and revenue
-        const orderStats = await Order.aggregate([
-            { $match: matchFilter },
+        const result = await Order.aggregate([
+            { $match: matchStage },
             {
-                $group: {
-                    _id: null,
-                    totalOrders: { $sum: 1 },
-                    totalRevenue: { $sum: "$totalAmount" },
-                    avgOrderValue: { $avg: "$totalAmount" }
+                $facet: {
+                    orderStats: [
+                        {
+                            $group: {
+                                _id: null,
+                                totalOrders: { $sum: 1 },
+                                totalRevenue: { $sum: "$totalAmount" },
+                                avgOrderValue: { $avg: "$totalAmount" }
+                            }
+                        }
+                    ],
+                    ordersByStatus: [
+                        {
+                            $group: {
+                                _id: "$status",
+                                count: { $sum: 1 },
+                                totalAmount: { $sum: "$totalAmount" }
+                            }
+                        }
+                    ],
+                    topSalesPersons: salesPersonId ? [] : [
+                        {
+                            $group: {
+                                _id: "$salesPerson",
+                                totalOrders: { $sum: 1 },
+                                totalRevenue: { $sum: "$totalAmount" }
+                            }
+                        },
+                        { $sort: { totalRevenue: -1 } },
+                        { $limit: 5 },
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "_id",
+                                foreignField: "_id",
+                                as: "salesPerson"
+                            }
+                        },
+                        { $unwind: "$salesPerson" },
+                        {
+                            $project: {
+                                name: "$salesPerson.name",
+                                email: "$salesPerson.email",
+                                totalOrders: 1,
+                                totalRevenue: 1
+                            }
+                        }
+                    ]
                 }
             }
         ]);
 
-        // Orders by status
-        const ordersByStatus = await Order.aggregate([
-            { $match: matchFilter },
-            {
-                $group: {
-                    _id: "$status",
-                    count: { $sum: 1 },
-                    totalAmount: { $sum: "$totalAmount" }
-                }
-            }
-        ]);
-
-        // Top sales persons (if not filtered by specific sales person)
-        let topSalesPersons = [];
-        if (!salesPersonId) {
-            topSalesPersons = await Order.aggregate([
-                { $match: matchFilter },
-                {
-                    $group: {
-                        _id: "$salesPerson",
-                        totalOrders: { $sum: 1 },
-                        totalRevenue: { $sum: "$totalAmount" }
-                    }
-                },
-                { $sort: { totalRevenue: -1 } },
-                { $limit: 5 },
-                {
-                    $lookup: {
-                        from: "users",
-                        localField: "_id",
-                        foreignField: "_id",
-                        as: "salesPerson"
-                    }
-                },
-                { $unwind: "$salesPerson" },
-                {
-                    $project: {
-                        name: "$salesPerson.name",
-                        email: "$salesPerson.email",
-                        totalOrders: 1,
-                        totalRevenue: 1
-                    }
-                }
-            ]);
-        }
-
-        const stats = orderStats[0] || { totalOrders: 0, totalRevenue: 0, avgOrderValue: 0 };
+        const data = result[0];
+        const stats = data.orderStats[0] || {
+            totalOrders: 0,
+            totalRevenue: 0,
+            avgOrderValue: 0
+        };
 
         return {
             totalOrders: stats.totalOrders,
             totalRevenue: stats.totalRevenue,
             avgOrderValue: stats.avgOrderValue,
-            ordersByStatus: ordersByStatus.reduce((acc, item) => {
+            ordersByStatus: data.ordersByStatus.reduce((acc, item) => {
                 acc[item._id] = {
                     count: item.count,
                     totalAmount: item.totalAmount
                 };
                 return acc;
             }, {}),
-            topSalesPersons
+            topSalesPersons: data.topSalesPersons || []
         };
 
     } catch (error) {
@@ -174,7 +181,7 @@ export const getOrderDashboard = async (filters = {}) => {
 
         let matchFilter = {};
         if (salesPersonId) {
-            matchFilter.salesPerson = salesPersonId;
+            matchFilter.salesPerson = new mongoose.Types.ObjectId(salesPersonId);
         }
 
         // Orders by status with details
@@ -195,7 +202,7 @@ export const getOrderDashboard = async (filters = {}) => {
             .populate('salesPerson', 'name email')
             .sort({ createdAt: -1 })
             .limit(10)
-            .select('orderNo customer.name customer.companyName totalAmount status orderDate');
+            .select('orderNo customer.name customer.contactPerson totalAmount status orderDate');
 
         // Pending PO orders
         const pendingPO = await Order.countDocuments({
@@ -233,55 +240,73 @@ export const getFollowupReminders = async (salesPersonId = null) => {
         const nextWeek = new Date();
         nextWeek.setDate(nextWeek.getDate() + 7);
 
-        // Upcoming follow-ups
-        const upcomingFollowups = await Followup.find({
+        let matchUpcoming = {
             nextFollowupDate: {
                 $gte: today,
                 $lte: nextWeek
             }
-        })
-            .populate({
-                path: 'lead',
-                populate: {
-                    path: 'assignedTo',
-                    select: 'name email'
-                }
-            })
-            .sort({ nextFollowupDate: 1 });
+        };
 
-        // Filter by sales person if provided
-        let filteredFollowups = upcomingFollowups;
-        if (salesPersonId) {
-            filteredFollowups = upcomingFollowups.filter(f =>
-                f.lead.assignedTo && f.lead.assignedTo._id.toString() === salesPersonId
-            );
-        }
-
-        // Overdue follow-ups
-        const overdueFollowups = await Followup.find({
+        let matchOverdue = {
             nextFollowupDate: { $lt: today }
-        })
-            .populate({
-                path: 'lead',
-                populate: {
-                    path: 'assignedTo',
-                    select: 'name email'
-                }
-            })
-            .sort({ nextFollowupDate: 1 });
+        };
 
-        let filteredOverdue = overdueFollowups;
+        const pipeline = [
+            {
+                $lookup: {
+                    from: "leads",
+                    localField: "lead",
+                    foreignField: "_id",
+                    as: "lead"
+                }
+            },
+            { $unwind: "$lead" },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "lead.assignedTo",
+                    foreignField: "_id",
+                    as: "lead.assignedTo"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$lead.assignedTo",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    "lead.assignedTo.password": 0,
+                    "lead.assignedTo.refreshToken": 0
+                }
+            }
+        ];
+
         if (salesPersonId) {
-            filteredOverdue = overdueFollowups.filter(f =>
-                f.lead.assignedTo && f.lead.assignedTo._id.toString() === salesPersonId
-            );
+            const sid = new mongoose.Types.ObjectId(salesPersonId);
+            matchUpcoming["lead.assignedTo"] = sid;
+            matchOverdue["lead.assignedTo"] = sid;
         }
+
+        const [upcoming, overdue] = await Promise.all([
+            Followup.aggregate([
+                { $match: matchUpcoming },
+                ...pipeline,
+                { $sort: { nextFollowupDate: 1 } }
+            ]),
+            Followup.aggregate([
+                { $match: matchOverdue },
+                ...pipeline,
+                { $sort: { nextFollowupDate: 1 } }
+            ])
+        ]);
 
         return {
-            upcoming: filteredFollowups,
-            overdue: filteredOverdue,
-            totalUpcoming: filteredFollowups.length,
-            totalOverdue: filteredOverdue.length
+            upcoming,
+            overdue,
+            totalUpcoming: upcoming.length,
+            totalOverdue: overdue.length
         };
 
     } catch (error) {
@@ -297,39 +322,120 @@ export const getFollowupReminders = async (salesPersonId = null) => {
  */
 export const getDashboardStats = async (userId, userRole) => {
     try {
+        const { Quotation } = await import("../models/quotation.models.js");
+
         let leadsCount = 0;
         let quotationsCount = 0;
         let ordersCount = 0;
+        let pendingFollowups = 0;
+        let convertedQuotationsCount = 0;
+        let leadsWithQuotations = 0;
+        let leadsWithOrders = 0;
 
         if (userRole === "STAFF") {
-            // For staff, count only their assigned items
-            leadsCount = await Lead.countDocuments({
-                assignedTo: userId,
-                isActive: true
-            });
+            const sid = new mongoose.Types.ObjectId(userId);
 
-            const { Quotation } = await import("../models/quotation.models.js");
-            quotationsCount = await Quotation.countDocuments({
-                salesPersonId: userId
-            });
+            // Optimized counts for Staff
+            const result = await Lead.aggregate([
+                { $match: { assignedTo: sid, isActive: true } },
+                {
+                    $facet: {
+                        leadsCount: [{ $count: "count" }],
+                        followups: [
+                            { $match: { status: "FOLLOW_UP" } },
+                            { $count: "count" }
+                        ],
+                        leadsWithOrders: [
+                            {
+                                $lookup: {
+                                    from: "orders",
+                                    localField: "_id",
+                                    foreignField: "lead",
+                                    as: "orders"
+                                }
+                            },
+                            { $match: { "orders.salesPerson": sid } },
+                            { $unwind: "$orders" },
+                            { $group: { _id: "$_id" } },
+                            { $count: "count" }
+                        ]
+                    }
+                }
+            ]);
 
-            ordersCount = await Order.countDocuments({
-                salesPerson: userId
-            });
-        } else if (userRole === "ADMIN" || userRole === "SUB_ADMIN") {
-            // For admin and sub-admin, count all items
-            leadsCount = await Lead.countDocuments({ isActive: true });
+            const data = result[0];
+            leadsCount = data.leadsCount[0]?.count || 0;
+            pendingFollowups = data.followups[0]?.count || 0;
+            leadsWithOrders = data.leadsWithOrders[0]?.count || 0;
 
-            const { Quotation } = await import("../models/quotation.models.js");
-            quotationsCount = await Quotation.countDocuments({});
+            // Quotation stats
+            const qResult = await Quotation.aggregate([
+                { $match: { salesPersonId: sid } },
+                {
+                    $facet: {
+                        total: [{ $count: "count" }],
+                        converted: [{ $match: { status: "CONVERTED" } }, { $count: "count" }],
+                        distinctLeads: [{ $group: { _id: "$leadId" } }, { $count: "count" }]
+                    }
+                }
+            ]);
 
-            ordersCount = await Order.countDocuments({});
+            const qData = qResult[0];
+            quotationsCount = qData.total[0]?.count || 0;
+            convertedQuotationsCount = qData.converted[0]?.count || 0;
+            leadsWithQuotations = qData.distinctLeads[0]?.count || 0;
+
+            ordersCount = await Order.countDocuments({ salesPerson: sid });
+
+        } else if (userRole === "ADMIN" || userRole === "SUB_ADMIN" || userRole === "SUPER_ADMIN") {
+            // Optimized counts for Admin
+            const result = await Promise.all([
+                Lead.countDocuments({ isActive: true }),
+                Quotation.aggregate([
+                    {
+                        $facet: {
+                            total: [{ $count: "count" }],
+                            converted: [{ $match: { status: "CONVERTED" } }, { $count: "count" }],
+                            distinctLeads: [{ $group: { _id: "$leadId" } }, { $count: "count" }]
+                        }
+                    }
+                ]),
+                Order.aggregate([
+                    {
+                        $facet: {
+                            total: [{ $count: "count" }],
+                            distinctLeads: [{ $group: { _id: "$lead" } }, { $count: "count" }]
+                        }
+                    }
+                ]),
+                Lead.countDocuments({ isActive: true, status: "FOLLOW_UP" })
+            ]);
+
+            leadsCount = result[0];
+            const qData = result[1][0];
+            quotationsCount = qData.total[0]?.count || 0;
+            convertedQuotationsCount = qData.converted[0]?.count || 0;
+            leadsWithQuotations = qData.distinctLeads[0]?.count || 0;
+
+            const oData = result[2][0];
+            ordersCount = oData.total[0]?.count || 0;
+            leadsWithOrders = oData.distinctLeads[0]?.count || 0;
+
+            pendingFollowups = result[3];
         }
+
+        const quotationToOrderRate = quotationsCount > 0
+            ? ((convertedQuotationsCount / quotationsCount) * 100).toFixed(2)
+            : 0;
 
         return {
             leadsCount,
             quotationsCount,
-            ordersCount
+            ordersCount,
+            pendingFollowups,
+            quotationToOrderRate: Number(quotationToOrderRate),
+            leadsToOrdersCount: leadsWithOrders,
+            leadsToQuotationsCount: leadsWithQuotations
         };
 
     } catch (error) {

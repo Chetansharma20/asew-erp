@@ -8,9 +8,9 @@ import * as partyService from "../services/party.services.js";
  * POST /api/parties
  */
 export const createParty = asyncHandler(async (req, res) => {
-    const { name, email, contact, companyName, address } = req.body;
+    const { name, email, contact, contactPerson, address } = req.body;
 
-    if (!name || !email || !contact || !companyName || !address) {
+    if (!name || !email || !contact || !contactPerson || !address) {
         throw new ApiError(400, "All fields are required");
     }
 

@@ -40,7 +40,7 @@ const Sidebar = ({ menuItems, colorScheme }) => {
                     <div className={`w-8 h-8 rounded-lg ${activeScheme.active} flex items-center justify-center font-bold`}>
                         A
                     </div>
-                    <span className="text-xl font-bold tracking-tight text-white">ASEW</span>
+                    <span className="text-xl font-bold tracking-tight text-white">ERP</span>
                 </div>
 
                 <nav className="space-y-1">
@@ -62,7 +62,7 @@ const Sidebar = ({ menuItems, colorScheme }) => {
             </div>
 
             <div className="mt-auto p-6 border-t border-white/10">
-                <p className="text-xs text-white/50">© 2024 ASEW Management</p>
+                <p className="text-xs text-white/50">© 2024 ERP Management</p>
             </div>
         </aside>
     )

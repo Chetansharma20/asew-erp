@@ -4,6 +4,8 @@ import { generateLeadNumber } from "../utils/autoNumber.helper.js";
 import { ApiError } from "../utils/ApiError.js";
 
 import { findOrCreateParty } from "./party.services.js";
+import { createQuotation } from "./quotation.services.js";
+import { Quotation } from "../models/quotation.models.js";
 
 /**
  * Create new lead
@@ -28,18 +30,33 @@ export const createLead = async (leadData, createdBy) => {
         // Generate lead number
         const leadNo = await generateLeadNumber();
 
+        // Determine initial status and assignment history
+        let status = "NEW";
+        let assignmentHistory = [];
+
+        if (leadData.assignedTo) {
+            status = "ASSIGNED";
+            assignmentHistory.push({
+                assignedTo: leadData.assignedTo,
+                assignedBy: createdBy,
+                assignedAt: new Date(),
+                reason: "Initial assignment on creation"
+            });
+        }
+
         // Create lead
         const lead = await Lead.create({
             ...leadData,
             customer: customerId,
             leadNo,
             createdBy,
-            status: "NEW"
+            status,
+            assignmentHistory
         });
 
         return await Lead.findById(lead._id)
             .populate('interestedIn.item', 'name description basePrice')
-            .populate('customer', 'name email contact companyName address')
+            .populate('customer', 'name email contact contactPerson address')
             .populate('createdBy', 'name email');
 
     } catch (error) {
@@ -69,14 +86,25 @@ export const updateLead = async (leadId, updateData) => {
         if (updateData.source) lead.source = updateData.source;
         if (updateData.interestedIn) lead.interestedIn = updateData.interestedIn;
         if (updateData.remarks) lead.remarks = updateData.remarks;
-        if (updateData.status) lead.status = updateData.status;
         if (updateData.assignedTo) lead.assignedTo = updateData.assignedTo;
 
+        // Save non-status changes first
         await lead.save();
+
+        // Handle status change separately to trigger side effects (validations, auto-quotation, etc.)
+        if (updateData.status && updateData.status !== lead.status) {
+            // We use the exported function to ensure logic is reused
+            // Since updateLeadStatus is defined below, we rely on function hoisting if it was a function, 
+            // but it is a const. We MUST move updateLeadStatus definition UP or change it to function.
+            // OR checks if we can call it. 
+            // To be safe, I will change updateLeadStatus to `export async function` in the next step.
+            // For now, I'll assume I can call it or I will move it.
+            return await updateLeadStatus(leadId, updateData.status);
+        }
 
         return await Lead.findById(leadId)
             .populate('interestedIn.item', 'name description basePrice')
-            .populate('customer', 'name email contact companyName address')
+            .populate('customer', 'name email contact contactPerson address')
             .populate('createdBy', 'name email');
 
     } catch (error) {
@@ -144,7 +172,7 @@ export const reviewLead = async (leadId, status, remarks, reviewedBy) => {
 
         return await Lead.findById(leadId)
             .populate('interestedIn.item', 'name description basePrice')
-            .populate('customer', 'name email contact companyName address')
+            .populate('customer', 'name email contact contactPerson address')
             .populate('createdBy', 'name email')
             .populate('reviewedBy', 'name email');
 
@@ -204,7 +232,7 @@ export const assignSalesPerson = async (leadId, salesPersonId, assignedBy, reaso
 
         return await Lead.findById(leadId)
             .populate('interestedIn.item', 'name description basePrice')
-            .populate('customer', 'name email contact companyName address')
+            .populate('customer', 'name email contact contactPerson address')
             .populate('createdBy', 'name email')
             .populate('reviewedBy', 'name email')
             .populate('assignedTo', 'name email')
@@ -226,7 +254,7 @@ export const getLeadById = async (leadId) => {
     try {
         const lead = await Lead.findById(leadId)
             .populate('interestedIn.item', 'name description basePrice')
-            .populate('customer', 'name email contact companyName address')
+            .populate('customer', 'name email contact contactPerson address')
             .populate('createdBy', 'name email')
             .populate('reviewedBy', 'name email')
             .populate('assignedTo', 'name email')
@@ -295,22 +323,42 @@ export const getAllLeads = async (filters = {}, pagination = {}, userId, userRol
         if (filters.search) {
             query.$or = [
                 { 'customer.name': { $regex: filters.search, $options: 'i' } },
-                { 'customer.companyName': { $regex: filters.search, $options: 'i' } },
+                { 'customer.contactPerson': { $regex: filters.search, $options: 'i' } },
                 { 'customer.email': { $regex: filters.search, $options: 'i' } },
                 { leadNo: { $regex: filters.search, $options: 'i' } }
             ];
         }
 
         // Execute query
-        const leads = await Lead.find(query)
+        const leadsDocs = await Lead.find(query)
             .populate('interestedIn.item', 'name description basePrice')
-            .populate('customer', 'name email contact companyName address')
+            .populate('customer', 'name email contact contactPerson address')
             .populate('createdBy', 'name email')
             .populate('reviewedBy', 'name email')
             .populate('assignedTo', 'name email')
             .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
             .skip(skip)
             .limit(parseInt(limit));
+
+        // Check for approved quotations
+        const { Quotation } = await import("../models/quotation.models.js");
+        const leadIds = leadsDocs.map(l => l._id);
+
+        // Find leads that have APPROVED or CONVERTED quotations
+        const leadsWithApprovedQuotes = await Quotation.distinct('leadId', {
+            leadId: { $in: leadIds },
+            status: { $in: ['APPROVED', 'CONVERTED'] } // Converted also implies it was approved/processed
+        });
+
+        // Convert lookup to Set for O(1) access
+        const approvedLeadIdsSet = new Set(leadsWithApprovedQuotes.map(id => id.toString()));
+
+        // Attach flag to leads
+        const leads = leadsDocs.map(doc => {
+            const lead = doc.toObject();
+            lead.hasApprovedQuotation = approvedLeadIdsSet.has(lead._id.toString());
+            return lead;
+        });
 
         const total = await Lead.countDocuments(query);
 
@@ -335,10 +383,11 @@ export const getAllLeads = async (filters = {}, pagination = {}, userId, userRol
  * @param {string} status - New status
  * @returns {Promise<Object>} - Updated lead
  */
-export const updateLeadStatus = async (leadId, status) => {
+export async function updateLeadStatus(leadId, status) {
     try {
         const validStatuses = [
             "NEW", "APPROVED", "REJECTED", "ASSIGNED",
+            "CONTACTED", "QUALIFIED", "LOST",
             "FOLLOW_UP", "CLIENT_APPROVAL_PENDING",
             "APPROVED_BY_CLIENT", "CONVERTED_TO_ORDER"
         ];
@@ -354,11 +403,14 @@ export const updateLeadStatus = async (leadId, status) => {
 
         // Validate Status Transitions
         const VALID_TRANSITIONS = {
-            NEW: ["APPROVED", "REJECTED"],
-            APPROVED: ["ASSIGNED", "REJECTED"], // Added REJECTED just in case
-            ASSIGNED: ["FOLLOW_UP", "CLIENT_APPROVAL_PENDING", "REJECTED"],
-            FOLLOW_UP: ["CLIENT_APPROVAL_PENDING", "REJECTED", "CONVERTED_TO_ORDER"],
-            CLIENT_APPROVAL_PENDING: ["APPROVED_BY_CLIENT", "FOLLOW_UP", "REJECTED"],
+            NEW: ["APPROVED", "REJECTED", "ASSIGNED"],
+            APPROVED: ["ASSIGNED", "REJECTED"],
+            ASSIGNED: ["CONTACTED", "QUALIFIED", "LOST", "FOLLOW_UP", "CLIENT_APPROVAL_PENDING", "REJECTED"],
+            CONTACTED: ["QUALIFIED", "LOST", "FOLLOW_UP", "REJECTED"],
+            QUALIFIED: ["QUOTATION_SENT", "FOLLOW_UP", "LOST", "REJECTED"], // QUOTATION_SENT if applicable later
+            LOST: [], // Terminal state
+            FOLLOW_UP: ["CLIENT_APPROVAL_PENDING", "REJECTED", "CONVERTED_TO_ORDER", "QUALIFIED", "LOST"],
+            CLIENT_APPROVAL_PENDING: ["APPROVED_BY_CLIENT", "FOLLOW_UP", "REJECTED", "LOST"],
             APPROVED_BY_CLIENT: ["CONVERTED_TO_ORDER", "REJECTED"],
             REJECTED: [], // Terminal state
             CONVERTED_TO_ORDER: [] // Terminal state
@@ -371,12 +423,66 @@ export const updateLeadStatus = async (leadId, status) => {
             throw new ApiError(400, `Invalid status transition from ${lead.status} to ${status}`);
         }
 
+        const oldStatus = lead.status;
         lead.status = status;
         await lead.save();
 
+        // Auto-create quotation if status is QUALIFIED
+        if (status === "QUALIFIED") {
+            try {
+                // Check if quotation already exists
+                const existingQuotation = await Quotation.findOne({ leadId: lead._id });
+
+                if (!existingQuotation) {
+                    // Populate existing lead to get product details
+                    // We need to fetch fresh copy or populate the existing document
+                    // Since lead is already a mongoose document, we can use populate on it directly?
+                    // But easier to findById again to ensure clean state or just use what we have if populated.
+                    // Let's stick to safe pattern:
+                    const populatedLead = await Lead.findById(leadId).populate('interestedIn.item');
+
+                    if (!populatedLead.assignedTo) {
+                        throw new Error(`Lead #${populatedLead.leadNo} does not have an assigned salesperson. Please assign one before qualifying.`);
+                    }
+
+                    const quotationItems = populatedLead.interestedIn
+                        .filter(i => i.item && i.item._id)
+                        .map(interested => ({
+                            itemId: interested.item._id,
+                            quantity: interested.quantity || 1,
+                            UnitPrice: interested.item.basePrice || 0,
+                            Total: (interested.quantity || 1) * (interested.item.basePrice || 0)
+                        }));
+
+                    if (quotationItems.length === 0) {
+                        throw new Error(`Lead #${populatedLead.leadNo} has no products specified. Please add items before qualifying.`);
+                    }
+
+                    const quotationData = {
+                        quotationItems,
+                        additionalCharges: [],
+                        discount: { type: 'Percentage', value: 0, amount: 0 },
+                        tax: { type: 'GST', percentage: 18, amount: 0 },
+                        notes: `Auto-generated quotation for Lead #${populatedLead.leadNo}`,
+                        validTill: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+                    };
+
+                    await createQuotation(leadId, quotationData, populatedLead.assignedTo);
+                }
+            } catch (err) {
+                console.error("Auto-quotation failed:", err);
+
+                // Rollback status change
+                lead.status = oldStatus;
+                await lead.save();
+
+                throw new ApiError(400, `Auto-quotation failed: ${err.message}`);
+            }
+        }
+
         return await Lead.findById(leadId)
             .populate('interestedIn.item', 'name description basePrice')
-            .populate('customer', 'name email contact companyName address')
+            .populate('customer', 'name email contact contactPerson address')
             .populate('createdBy', 'name email')
             .populate('reviewedBy', 'name email')
             .populate('assignedTo', 'name email');

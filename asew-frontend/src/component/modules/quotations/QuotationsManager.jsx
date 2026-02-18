@@ -15,6 +15,20 @@ const QuotationsManager = () => {
 
     useEffect(() => {
         fetchInitialData()
+
+        // Listen for edit requests from the modal
+        const handleEditRequest = (e) => {
+            const quotationToEdit = e.detail;
+            if (quotationToEdit) {
+                handleEdit(quotationToEdit);
+            }
+        };
+
+        window.addEventListener('editQuotation', handleEditRequest);
+
+        return () => {
+            window.removeEventListener('editQuotation', handleEditRequest);
+        };
     }, [])
 
     const fetchInitialData = async () => {
@@ -200,49 +214,53 @@ const QuotationsManager = () => {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <select
-                                                    value={quotation.status}
-                                                    onChange={(e) => handleStatusChange(quotation._id, e.target.value)}
-                                                    className={`text-xs font-medium rounded-full px-2.5 py-0.5 border-0 focus:ring-2 focus:ring-blue-500 cursor-pointer ${getStatusBadgeColor(quotation.status)}`}
-                                                    onClick={(e) => e.stopPropagation()} // Prevent row click if any
-                                                    disabled={quotation.status === 'CONVERTED'}
-                                                >
-                                                    <option value="CREATED">CREATED</option>
-                                                    <option value="SENT">SENT</option>
-                                                    <option value="APPROVED">APPROVED</option>
-                                                    <option value="REJECTED">REJECTED</option>
-                                                    <option value="CONVERTED">CONVERTED</option>
-                                                </select>
+                                                <span className={`text-xs font-medium rounded-full px-2.5 py-0.5 border flex w-fit items-center gap-1 ${getStatusBadgeColor(quotation.status)}`}>
+                                                    {quotation.status}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-500">
                                                 {new Date(quotation.createdAt).toLocaleDateString()}
                                             </td>
-                                            <td className="px-6 py-4 text-right space-x-2">
-                                                <button
-                                                    onClick={() => handleView(quotation)}
-                                                    className="text-blue-600 hover:text-blue-700 transition-colors text-sm font-medium"
-                                                    title="View"
-                                                >
-                                                    View
-                                                </button>
-                                                {quotation.status === 'CREATED' && (
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end items-center gap-2">
+                                                    {/* Preview Action */}
                                                     <button
-                                                        onClick={() => handleEdit(quotation)}
-                                                        className="text-gray-600 hover:text-gray-700 transition-colors text-sm font-medium"
-                                                        title="Edit"
+                                                        onClick={() => handleView(quotation)}
+                                                        className="px-3 py-1 text-xs font-medium text-blue-600 hover:text-white bg-blue-50 hover:bg-blue-600 border border-blue-200 rounded-lg transition-colors"
                                                     >
-                                                        Edit
+                                                        Preview
                                                     </button>
-                                                )}
-                                                {quotation.status === 'APPROVED' && (
-                                                    <button
-                                                        onClick={() => handleConvertToOrder(quotation._id)}
-                                                        className="text-green-600 hover:text-green-700 transition-colors text-sm font-medium"
-                                                        title="Convert to Order"
-                                                    >
-                                                        Convert to Order
-                                                    </button>
-                                                )}
+
+                                                    {/* Update Action */}
+                                                    {(quotation.status === 'CREATED' || quotation.status === 'DRAFT' || quotation.status === 'SENT') && (
+                                                        <button
+                                                            onClick={() => handleEdit(quotation)}
+                                                            className="px-3 py-1 text-xs font-medium text-green-600 hover:text-white bg-green-50 hover:bg-green-600 border border-green-200 rounded-lg transition-colors"
+                                                        >
+                                                            Update
+                                                        </button>
+                                                    )}
+
+                                                    {/* Send Action */}
+                                                    {(quotation.status === 'CREATED' || quotation.status === 'DRAFT') && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!window.confirm("Are you sure you want to send this quotation to client?")) return;
+                                                                try {
+                                                                    await quotationApi.sendQuotationEmail(quotation._id);
+                                                                    fetchInitialData();
+                                                                    alert('Quotation sent to client successfully');
+                                                                } catch (err) {
+                                                                    console.error(err);
+                                                                    alert('Failed to send quotation');
+                                                                }
+                                                            }}
+                                                            className="px-3 py-1 text-xs font-medium text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 border border-indigo-200 rounded-lg transition-colors"
+                                                        >
+                                                            Send
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     )

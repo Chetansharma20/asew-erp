@@ -19,7 +19,7 @@ const partySchema = new mongoose.Schema(
             lowercase: true,
             match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address']
         },
-        companyName: {
+        contactPerson: {
             type: String,
             required: false,
             trim: true

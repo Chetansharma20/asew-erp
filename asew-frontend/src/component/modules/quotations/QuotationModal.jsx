@@ -280,186 +280,364 @@ const QuotationModal = ({ isOpen, onClose, selectedLead = null, initialQuotation
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto py-8">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl mx-4">
+            <div className={`bg-white rounded-2xl shadow-2xl w-full ${isViewMode ? 'max-w-4xl' : 'max-w-6xl'} mx-4`}>
                 {/* Header */}
                 <div className="px-8 py-6 border-b border-gray-200 flex justify-between items-center">
                     <h3 className="text-2xl font-bold text-gray-900">
-                        {mode === 'create' ? 'Generate Quotation' : mode === 'edit' ? 'Edit Quotation' : 'View Quotation'}
+                        {mode === 'create' ? 'Generate Quotation' : mode === 'edit' ? 'Edit Quotation' : 'Quotation Preview'}
                     </h3>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                    <div className="flex items-center gap-4">
+                        {isViewMode && (
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${initialQuotation?.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                                    initialQuotation?.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                                        initialQuotation?.status === 'SENT' ? 'bg-blue-100 text-blue-800' :
+                                            initialQuotation?.status === 'CONVERTED' ? 'bg-purple-100 text-purple-800' :
+                                                'bg-gray-100 text-gray-800'
+                                }`}>
+                                {initialQuotation?.status}
+                            </span>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <form onSubmit={(e) => handleSubmit(e, 'CREATED')} className="p-8 space-y-8">
-                    {/* Section 1: Lead Selection */}
-                    <div className="space-y-4">
-                        <h4 className="text-lg font-semibold text-gray-900">Lead Information</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Select Lead *</label>
-                                <select
-                                    value={formData.leadId}
-                                    onChange={handleLeadChange}
-                                    required
-                                    disabled={mode !== 'create'} // Cannot change lead during edit/view
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
-                                >
-                                    <option value="">-- Select Lead --</option>
-                                    {isLoading ? (
-                                        <option disabled>Loading leads...</option>
-                                    ) : (
-                                        leads.map(lead => (
-                                            <option key={lead._id} value={lead._id}>
-                                                {lead.leadNo} - {lead.customer?.name}
-                                            </option>
-                                        ))
-                                    )}
-                                </select>
+                    {/* View Mode: Document Style Layout */}
+                    {isViewMode ? (
+                        <div className="space-y-8">
+                            {/* Document Header Info */}
+                            <div className="flex justify-between items-start pb-6 border-b border-gray-100">
+                                <div>
+                                    <p className="text-sm text-gray-500 uppercase tracking-wider mb-1">Bill To</p>
+                                    <h4 className="text-lg font-bold text-gray-900">{selectedLeadData?.customer?.name || 'Unknown Customer'}</h4>
+                                    <div className="text-sm text-gray-600 mt-1 space-y-0.5">
+                                        <p>{selectedLeadData?.customer?.contactPerson}</p>
+                                        <p>{selectedLeadData?.customer?.email}</p>
+                                        <p>{selectedLeadData?.customer?.contact}</p>
+                                        <p className="max-w-xs">{selectedLeadData?.customer?.address}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="mb-4">
+                                        <p className="text-sm text-gray-500 uppercase tracking-wider mb-1">Quotation No</p>
+                                        <p className="text-lg font-bold text-gray-900">{initialQuotation?.quotationNo || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 uppercase tracking-wider mb-1">Date</p>
+                                        <p className="text-base font-medium text-gray-900">
+                                            {initialQuotation?.createdAt ? new Date(initialQuotation.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                            {selectedLeadData && (
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <p className="text-sm font-medium text-gray-700">Customer Details</p>
-                                    <p className="text-sm text-gray-600 mt-1">{selectedLeadData.customer?.name}</p>
-                                    <p className="text-xs text-gray-500">{selectedLeadData.customer?.contact}</p>
-                                    <p className="text-xs text-gray-500">{selectedLeadData.customer?.email}</p>
+
+                            {/* Items Table */}
+                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                            <th className="px-6 py-3 font-semibold text-gray-700">Item Description</th>
+                                            <th className="px-6 py-3 font-semibold text-gray-700 text-right">Qty</th>
+                                            <th className="px-6 py-3 font-semibold text-gray-700 text-right">Unit Price</th>
+                                            <th className="px-6 py-3 font-semibold text-gray-700 text-right">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {formData.items.map((item, idx) => (
+                                            <tr key={idx}>
+                                                <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                                                <td className="px-6 py-4 text-right">{item.qty}</td>
+                                                <td className="px-6 py-4 text-right">₹{item.unitPrice.toLocaleString('en-IN')}</td>
+                                                <td className="px-6 py-4 text-right font-semibold">₹{item.total.toLocaleString('en-IN')}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Totals Section */}
+                            <div className="flex justify-end">
+                                <div className="w-1/2 space-y-3">
+                                    <div className="flex justify-between text-sm text-gray-600">
+                                        <span>Subtotal</span>
+                                        <span className="font-medium text-gray-900">₹{subTotal.toLocaleString('en-IN')}</span>
+                                    </div>
+
+                                    {formData.additionalCharges.map((charge, idx) => (
+                                        <div key={idx} className="flex justify-between text-sm text-gray-600">
+                                            <span>{charge.title}</span>
+                                            <span className="font-medium text-gray-900">₹{charge.amount.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    ))}
+
+                                    {formData.discount.amount > 0 && (
+                                        <div className="flex justify-between text-sm text-green-600">
+                                            <span>Discount</span>
+                                            <span className="font-medium">- ₹{formData.discount.amount.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    )}
+
+                                    {formData.tax.amount > 0 && (
+                                        <div className="flex justify-between text-sm text-gray-600">
+                                            <span>Tax (GST {formData.tax.percentage}%)</span>
+                                            <span className="font-medium">₹{formData.tax.amount.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    )}
+
+                                    <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
+                                        <span className="text-base font-bold text-gray-900">Grand Total</span>
+                                        <span className="text-xl font-bold text-blue-600">₹{grandTotal.toLocaleString('en-IN')}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Notes */}
+                            {formData.notes && (
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <h5 className="text-sm font-semibold text-gray-900 mb-1">Notes / Terms</h5>
+                                    <p className="text-sm text-gray-600 whitespace-pre-line">{formData.notes}</p>
                                 </div>
                             )}
-                        </div>
-                    </div>
 
-                    {/* Section 2: Items */}
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h4 className="text-lg font-semibold text-gray-900">Items</h4>
-                            {!isViewMode && (
+                            {/* Action Buttons for View Mode */}
+                            <div className="flex gap-3 pt-6 border-t justify-end">
                                 <button
                                     type="button"
-                                    onClick={handleAddItem}
-                                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                                    onClick={onClose}
+                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
                                 >
-                                    + Add Item
+                                    Close
                                 </button>
-                            )}
-                        </div>
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                            <table className="w-full">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Product</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Qty</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Unit Price</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Total</th>
-                                        <th className="px-4 py-3"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                    {formData.items.map((item, index) => (
-                                        <tr key={index}>
-                                            <td className="px-4 py-3">
-                                                <select
-                                                    value={item.itemId}
-                                                    onChange={(e) => handleItemChange(index, 'itemId', e.target.value)}
-                                                    required
-                                                    disabled={isViewMode}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                                                >
-                                                    <option value="">-- Select --</option>
-                                                    {availableProducts.map(product => (
-                                                        <option key={product._id} value={product._id}>
-                                                            {product.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    type="number"
-                                                    value={item.qty}
-                                                    onChange={(e) => handleItemChange(index, 'qty', parseInt(e.target.value) || 0)}
-                                                    min="1"
-                                                    required
-                                                    disabled={isViewMode}
-                                                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    type="number"
-                                                    value={item.unitPrice}
-                                                    onChange={(e) => handleItemChange(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                                                    min="0"
-                                                    required
-                                                    disabled={isViewMode}
-                                                    className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-sm font-semibold text-gray-900">
-                                                    ₹{(item.total || 0).toLocaleString('en-IN')}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {!isViewMode && formData.items.length > 1 && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveItem(index)}
-                                                        className="text-red-600 hover:text-red-700 text-sm"
-                                                    >
-                                                        Remove
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div className="flex justify-end">
-                            <div className="text-right">
-                                <span className="text-sm text-gray-600">Subtotal: </span>
-                                <span className="text-lg font-bold text-gray-900">₹{(subTotal || 0).toLocaleString('en-IN')}</span>
+                                {/* Only show actions if status is CREATED or SENT (to resend) or similar active states */}
+                                {['CREATED', 'SENT', 'DRAFT'].includes(initialQuotation?.status) && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                // Switch to edit mode? Or handle Update & Send logic?
+                                                // For now, let's trigger edit on the parent if possible, or just call update logic here
+                                                const event = new CustomEvent('editQuotation', { detail: initialQuotation });
+                                                window.dispatchEvent(event);
+                                                // We rely on parent to handle this usually, but here we might just need to pass a callback 
+                                                // Since we don't have a callback prop for 'onEdit', we might need to modify the parent component to pass one.
+                                                // Alternatively, we can just say "Send to Client" here.
+                                                handleSubmit(e, 'SENT', true);
+                                            }}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex items-center gap-2"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                            </svg>
+                                            Send to Client
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
-                    </div>
-
-                    {/* Section 3: Additional Charges */}
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h4 className="text-lg font-semibold text-gray-900">Additional Charges</h4>
-                            {!isViewMode && (
-                                <button
-                                    type="button"
-                                    onClick={handleAddCharge}
-                                    className="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
-                                >
-                                    + Add Charge
-                                </button>
-                            )}
-                        </div>
-                        {formData.additionalCharges.length > 0 && (
-                            <div className="space-y-2">
-                                {formData.additionalCharges.map((charge, index) => (
-                                    <div key={index} className="grid grid-cols-5 gap-3 items-center">
-                                        <input
-                                            type="text"
-                                            placeholder="Title (e.g., Transport)"
-                                            value={charge.title}
-                                            onChange={(e) => handleChargeChange(index, 'title', e.target.value)}
-                                            required
-                                            disabled={isViewMode}
-                                            className="col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                                        />
+                    ) : (
+                        // Edit/Create Mode: Original Grid Layout
+                        <>
+                            {/* Section 1: Lead Selection */}
+                            <div className="space-y-4">
+                                <h4 className="text-lg font-semibold text-gray-900">Lead Information</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Select Lead *</label>
                                         <select
-                                            value={charge.type}
-                                            onChange={(e) => handleChargeChange(index, 'type', e.target.value)}
-                                            disabled={isViewMode}
-                                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                                            value={formData.leadId}
+                                            onChange={handleLeadChange}
+                                            required
+                                            disabled={mode !== 'create'} // Cannot change lead during edit/view
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                        >
+                                            <option value="">-- Select Lead --</option>
+                                            {isLoading ? (
+                                                <option disabled>Loading leads...</option>
+                                            ) : (
+                                                leads.map(lead => (
+                                                    <option key={lead._id} value={lead._id}>
+                                                        {lead.leadNo} - {lead.customer?.name}
+                                                    </option>
+                                                ))
+                                            )}
+                                        </select>
+                                    </div>
+                                    {selectedLeadData && (
+                                        <div className="bg-gray-50 p-4 rounded-lg">
+                                            <p className="text-sm font-medium text-gray-700">Customer Details</p>
+                                            <p className="text-sm text-gray-600 mt-1">{selectedLeadData.customer?.name}</p>
+                                            <p className="text-xs text-gray-500">{selectedLeadData.customer?.contact}</p>
+                                            <p className="text-xs text-gray-500">{selectedLeadData.customer?.email}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Section 2: Items */}
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-lg font-semibold text-gray-900">Items</h4>
+                                    <button
+                                        type="button"
+                                        onClick={handleAddItem}
+                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                        + Add Item
+                                    </button>
+                                </div>
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Product</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Qty</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Unit Price</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Total</th>
+                                                <th className="px-4 py-3"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                            {formData.items.map((item, index) => (
+                                                <tr key={index}>
+                                                    <td className="px-4 py-3">
+                                                        <select
+                                                            value={item.itemId}
+                                                            onChange={(e) => handleItemChange(index, 'itemId', e.target.value)}
+                                                            required
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                                        >
+                                                            <option value="">-- Select --</option>
+                                                            {availableProducts.map(product => (
+                                                                <option key={product._id} value={product._id}>
+                                                                    {product.name}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <input
+                                                            type="number"
+                                                            value={item.qty}
+                                                            onChange={(e) => handleItemChange(index, 'qty', parseInt(e.target.value) || 0)}
+                                                            min="1"
+                                                            required
+                                                            className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <input
+                                                            type="number"
+                                                            value={item.unitPrice}
+                                                            onChange={(e) => handleItemChange(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                                                            min="0"
+                                                            required
+                                                            className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-sm font-semibold text-gray-900">
+                                                            ₹{(item.total || 0).toLocaleString('en-IN')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        {formData.items.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveItem(index)}
+                                                                className="text-red-600 hover:text-red-700 text-sm"
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="flex justify-end">
+                                    <div className="text-right">
+                                        <span className="text-sm text-gray-600">Subtotal: </span>
+                                        <span className="text-lg font-bold text-gray-900">₹{(subTotal || 0).toLocaleString('en-IN')}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 3: Additional Charges */}
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-lg font-semibold text-gray-900">Additional Charges</h4>
+                                    <button
+                                        type="button"
+                                        onClick={handleAddCharge}
+                                        className="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
+                                    >
+                                        + Add Charge
+                                    </button>
+                                </div>
+                                {formData.additionalCharges.length > 0 && (
+                                    <div className="space-y-2">
+                                        {formData.additionalCharges.map((charge, index) => (
+                                            <div key={index} className="grid grid-cols-5 gap-3 items-center">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Title (e.g., Transport)"
+                                                    value={charge.title}
+                                                    onChange={(e) => handleChargeChange(index, 'title', e.target.value)}
+                                                    required
+                                                    className="col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                                />
+                                                <select
+                                                    value={charge.type}
+                                                    onChange={(e) => handleChargeChange(index, 'type', e.target.value)}
+                                                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="FIXED">Fixed</option>
+                                                    <option value="PERCENTAGE">Percentage</option>
+                                                </select>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Value"
+                                                    value={charge.value}
+                                                    onChange={(e) => handleChargeChange(index, 'value', parseFloat(e.target.value) || 0)}
+                                                    min="0"
+                                                    required
+                                                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                                />
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-gray-900">
+                                                        ₹{(charge.amount || 0).toLocaleString('en-IN')}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveCharge(index)}
+                                                        className="text-red-600 hover:text-red-700 text-sm ml-2"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Section 4: Discount & Tax */}
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-3">
+                                    <h4 className="text-lg font-semibold text-gray-900">Discount</h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <select
+                                            value={formData.discount.type}
+                                            onChange={(e) => setFormData({ ...formData, discount: { ...formData.discount, type: e.target.value } })}
+                                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                                         >
                                             <option value="FIXED">Fixed</option>
                                             <option value="PERCENTAGE">Percentage</option>
@@ -467,111 +645,62 @@ const QuotationModal = ({ isOpen, onClose, selectedLead = null, initialQuotation
                                         <input
                                             type="number"
                                             placeholder="Value"
-                                            value={charge.value}
-                                            onChange={(e) => handleChargeChange(index, 'value', parseFloat(e.target.value) || 0)}
+                                            value={formData.discount.value}
+                                            onChange={(e) => setFormData({ ...formData, discount: { ...formData.discount, value: parseFloat(e.target.value) || 0 } })}
                                             min="0"
-                                            required
-                                            disabled={isViewMode}
-                                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                                         />
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium text-gray-900">
-                                                ₹{(charge.amount || 0).toLocaleString('en-IN')}
-                                            </span>
-                                            {!isViewMode && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveCharge(index)}
-                                                    className="text-red-600 hover:text-red-700 text-sm ml-2"
-                                                >
-                                                    ×
-                                                </button>
-                                            )}
-                                        </div>
                                     </div>
-                                ))}
+                                    <p className="text-sm text-gray-600">
+                                        Discount Amount: <span className="font-semibold">₹{(formData.discount.amount || 0).toLocaleString('en-IN')}</span>
+                                    </p>
+                                </div>
+                                <div className="space-y-3">
+                                    <h4 className="text-lg font-semibold text-gray-900">Tax (GST)</h4>
+                                    <input
+                                        type="number"
+                                        placeholder="GST %"
+                                        value={formData.tax.percentage}
+                                        onChange={(e) => setFormData({ ...formData, tax: { ...formData.tax, percentage: parseFloat(e.target.value) || 0 } })}
+                                        min="0"
+                                        max="100"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <p className="text-sm text-gray-600">
+                                        Tax Amount: <span className="font-semibold">₹{(formData.tax.amount || 0).toLocaleString('en-IN')}</span>
+                                    </p>
+                                </div>
                             </div>
-                        )}
-                    </div>
 
-                    {/* Section 4: Discount & Tax */}
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                            <h4 className="text-lg font-semibold text-gray-900">Discount</h4>
-                            <div className="grid grid-cols-2 gap-3">
-                                <select
-                                    value={formData.discount.type}
-                                    onChange={(e) => setFormData({ ...formData, discount: { ...formData.discount, type: e.target.value } })}
-                                    disabled={isViewMode}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                                >
-                                    <option value="FIXED">Fixed</option>
-                                    <option value="PERCENTAGE">Percentage</option>
-                                </select>
-                                <input
-                                    type="number"
-                                    placeholder="Value"
-                                    value={formData.discount.value}
-                                    onChange={(e) => setFormData({ ...formData, discount: { ...formData.discount, value: parseFloat(e.target.value) || 0 } })}
-                                    min="0"
-                                    disabled={isViewMode}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                            {/* Section 5: Notes */}
+                            <div className="space-y-3">
+                                <h4 className="text-lg font-semibold text-gray-900">Notes / Terms & Conditions</h4>
+                                <textarea
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                    rows="3"
+                                    placeholder="Enter any special notes, terms, or conditions..."
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
                             </div>
-                            <p className="text-sm text-gray-600">
-                                Discount Amount: <span className="font-semibold">₹{(formData.discount.amount || 0).toLocaleString('en-IN')}</span>
-                            </p>
-                        </div>
-                        <div className="space-y-3">
-                            <h4 className="text-lg font-semibold text-gray-900">Tax (GST)</h4>
-                            <input
-                                type="number"
-                                placeholder="GST %"
-                                value={formData.tax.percentage}
-                                onChange={(e) => setFormData({ ...formData, tax: { ...formData.tax, percentage: parseFloat(e.target.value) || 0 } })}
-                                min="0"
-                                max="100"
-                                disabled={isViewMode}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                            />
-                            <p className="text-sm text-gray-600">
-                                Tax Amount: <span className="font-semibold">₹{(formData.tax.amount || 0).toLocaleString('en-IN')}</span>
-                            </p>
-                        </div>
-                    </div>
 
-                    {/* Section 5: Notes */}
-                    <div className="space-y-3">
-                        <h4 className="text-lg font-semibold text-gray-900">Notes / Terms & Conditions</h4>
-                        <textarea
-                            value={formData.notes}
-                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                            rows="3"
-                            disabled={isViewMode}
-                            placeholder="Enter any special notes, terms, or conditions..."
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
-                        />
-                    </div>
+                            {/* Grand Total */}
+                            <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xl font-bold text-gray-900">Grand Total</span>
+                                    <span className="text-3xl font-bold text-blue-600">₹{(grandTotal || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            </div>
 
-                    {/* Grand Total */}
-                    <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                        <div className="flex justify-between items-center">
-                            <span className="text-xl font-bold text-gray-900">Grand Total</span>
-                            <span className="text-3xl font-bold text-blue-600">₹{(grandTotal || 0).toLocaleString('en-IN')}</span>
-                        </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-3 pt-4 border-t justify-end">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-                        >
-                            {isViewMode ? 'Close' : 'Cancel'}
-                        </button>
-                        {!isViewMode && (
-                            <>
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-4 border-t justify-end">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                                >
+                                    Cancel
+                                </button>
                                 {mode === 'create' ? (
                                     <>
                                         <button
@@ -606,9 +735,9 @@ const QuotationModal = ({ isOpen, onClose, selectedLead = null, initialQuotation
                                         </button>
                                     </>
                                 )}
-                            </>
-                        )}
-                    </div>
+                            </div>
+                        </>
+                    )}
                 </form>
             </div>
         </div>

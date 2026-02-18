@@ -14,13 +14,35 @@ import {
 } from "../controllers/users.controllers.js"
 import { verifyJWT, authorizeRoles } from "../middlewares/auth.middleware.js"
 
+import { User } from "../models/users.models.js"
+
 const router = Router()
 
 // Public Routes
 router.post('/login', loginUser)
 
 // Secured Routes
-router.post('/register', verifyJWT, authorizeRoles("ADMIN", "SUPER_ADMIN", "SUB_ADMIN"), registerUser)
+router.post('/register', async (req, res, next) => {
+    try {
+        const userCount = await User.countDocuments();
+        if (userCount === 0) {
+            return registerUser(req, res, next);
+        }
+
+        return verifyJWT(req, res, (err) => {
+            if (err) return next(err);
+
+            // Call authorizeRoles middleware
+            authorizeRoles("ADMIN", "SUPER_ADMIN", "SUB_ADMIN")(req, res, (authErr) => {
+                if (authErr) return next(authErr);
+                // If authorized, proceed to the actual controller
+                return registerUser(req, res, next);
+            });
+        });
+    } catch (error) {
+        next(error);
+    }
+})
 router.post("/logout", verifyJWT, logoutUser)
 router.get("/get-current-user", verifyJWT, getCurrentUser)
 router.patch("/update-current-user", verifyJWT, updateCurrentUser)

@@ -49,8 +49,8 @@ const OrdersManager = () => {
                             key={status}
                             onClick={() => setFilterStatus(status)}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterStatus === status
-                                    ? 'bg-blue-600 text-white shadow-sm'
-                                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
                                 }`}
                         >
                             {status === 'ALL' ? 'All Orders' : status.replace('_', ' ')}
@@ -101,7 +101,7 @@ const OrdersManager = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-sm font-medium text-gray-900">{order.customer?.name}</div>
-                                            <div className="text-xs text-gray-500">{order.customer?.companyName}</div>
+                                            <div className="text-xs text-gray-500">{order.customer?.contactPerson}</div>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-600">
                                             {order.salesPerson?.name}

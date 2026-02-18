@@ -22,7 +22,7 @@ const LeadsManager = () => {
             name: '',
             contact: '',
             email: '',
-            companyName: '',
+            contactPerson: '',
             address: ''
         },
         interestedIn: [],
@@ -145,7 +145,19 @@ const LeadsManager = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target
-        setFormData({ ...formData, [name]: value })
+
+        let newFormData = { ...formData, [name]: value }
+
+        // Auto-update status when assigning during creation or edit
+        if (name === 'assignedTo') {
+            if (value) {
+                newFormData.status = 'ASSIGNED'
+            } else {
+                newFormData.status = 'NEW'
+            }
+        }
+
+        setFormData(newFormData)
     }
 
     const handleSubmit = async (e) => {
@@ -204,12 +216,14 @@ const LeadsManager = () => {
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 border-b border-gray-100">
                             <tr>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead No</th>
+
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Interested In</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Assigned To</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">View</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Follow up</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
                             </tr>
                         </thead>
@@ -223,11 +237,11 @@ const LeadsManager = () => {
                             ) : leads.length > 0 ? (
                                 leads.map((lead) => (
                                     <tr key={lead._id} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{lead.leadNo}</td>
+
                                         <td className="px-6 py-4">
                                             <div className="text-sm font-medium text-gray-900">{lead.customer?.name}</div>
-                                            {lead.customer?.companyName && (
-                                                <div className="text-xs text-gray-500">{lead.customer.companyName}</div>
+                                            {lead.customer?.contactPerson && (
+                                                <div className="text-xs text-gray-500">{lead.customer.contactPerson}</div>
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
@@ -255,32 +269,33 @@ const LeadsManager = () => {
                                         <td className="px-6 py-4 text-sm text-gray-500">
                                             {lead.assignedTo?.name || lead.assignedTo || '-'}
                                         </td>
-                                        <td className="px-6 py-4 text-right space-x-2 flex justify-end">
+                                        <td className="px-6 py-4 text-sm text-gray-500">
                                             <button
                                                 onClick={() => handleOpenModal(lead, true)}
-                                                className="text-gray-500 hover:text-gray-700 transition-colors"
-                                                title="View Details"
+                                                className="text-blue-600 hover:text-blue-800 font-medium"
+                                                title="Preview Details"
                                             >
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
+                                                Preview
                                             </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            {lead.hasApprovedQuotation ? (
+                                                <button
+                                                    onClick={() => handleOpenFollowup(lead._id)}
+                                                    className="text-yellow-600 hover:text-yellow-800 font-medium"
+                                                    title="Follow Up History"
+                                                >
+                                                    History
+                                                </button>
+                                            ) : '-'}
+                                        </td>
+                                        <td className="px-6 py-4 text-right space-x-2 flex justify-end">
                                             <button
-                                                onClick={() => handleOpenFollowup(lead._id)}
-                                                className="text-yellow-600 hover:text-yellow-800 transition-colors"
-                                                title="Follow Up History"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                            </button>
-                                            <button
-                                                onClick={() => handleOpenModal(lead)}
+                                                onClick={() => handleOpenModal(lead, ['LOST', 'REJECTED', 'CONVERTED_TO_ORDER', 'WON'].includes(lead.status))}
                                                 className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                                title="Edit"
+                                                title={['LOST', 'REJECTED', 'CONVERTED_TO_ORDER', 'WON'].includes(lead.status) ? "View Details" : "Update"}
                                             >
-                                                Edit
+                                                {['LOST', 'REJECTED', 'CONVERTED_TO_ORDER', 'WON'].includes(lead.status) ? "View" : "Update"}
                                             </button>
                                             {userRole !== 'STAFF' && (
                                                 <button
@@ -310,7 +325,7 @@ const LeadsManager = () => {
             {
                 isModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl p-5 animate-in fade-in zoom-in duration-200">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl p-5 animate-in fade-in zoom-in duration-200 max-h-[95vh] overflow-y-auto">
                             <div className="flex justify-between items-center mb-4 border-b pb-3">
                                 <h3 className="text-lg font-bold text-gray-900">
                                     {isViewOnly ? 'Lead Details' : (currentLead ? 'Edit Lead' : 'Add New Lead')}
@@ -322,275 +337,406 @@ const LeadsManager = () => {
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <fieldset disabled={isViewOnly} className="contents">
-                                    {/* Row 1: Customer Details (4 Columns) */}
-                                    <div>
-                                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Customer Details</h4>
-                                        <div className="grid grid-cols-4 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Customer Name *</label>
-                                                <input
-                                                    type="text"
-                                                    name="name"
-                                                    required
-                                                    disabled={userRole === 'STAFF'}
-                                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
-                                                    value={formData.customerData.name}
-                                                    onChange={handleCustomerChange}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Phone *</label>
-                                                <input
-                                                    type="tel"
-                                                    name="contact"
-                                                    required
-                                                    disabled={userRole === 'STAFF'}
-                                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
-                                                    value={formData.customerData.contact}
-                                                    onChange={handleCustomerChange}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                                                <input
-                                                    type="email"
-                                                    name="email"
-                                                    disabled={userRole === 'STAFF'}
-                                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
-                                                    value={formData.customerData.email}
-                                                    onChange={handleCustomerChange}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Company Name</label>
-                                                <input
-                                                    type="text"
-                                                    name="companyName"
-                                                    disabled={userRole === 'STAFF'}
-                                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
-                                                    value={formData.customerData.companyName}
-                                                    onChange={handleCustomerChange}
-                                                />
-                                            </div>
+                            {isViewOnly ? (
+                                <div className="space-y-6 py-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Customer Name</p>
+                                            <p className="text-sm font-semibold text-gray-900">{formData.customerData.name || '-'}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Phone Number</p>
+                                            <p className="text-sm font-semibold text-gray-900">{formData.customerData.contact || '-'}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email Address</p>
+                                            <p className="text-sm font-semibold text-gray-900 break-all">{formData.customerData.email || '-'}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contact Person</p>
+                                            <p className="text-sm font-semibold text-gray-900">{formData.customerData.contactPerson || '-'}</p>
                                         </div>
                                     </div>
 
-                                    {/* Row 2: Lead Details (4 Columns) */}
-                                    <div>
-                                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Lead Information</h4>
-                                        <div className="grid grid-cols-4 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Lead Number</label>
-                                                <input
-                                                    type="text"
-                                                    name="leadNo"
-                                                    readOnly
-                                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-500 bg-gray-50 cursor-not-allowed"
-                                                    value={formData.leadNo}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Status *</label>
-                                                <select
-                                                    name="status"
-                                                    required
-                                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-50 disabled:text-gray-500"
-                                                    value={formData.status}
-                                                    onChange={handleInputChange}
-                                                >
-                                                    <option value="NEW">NEW</option>
-                                                    <option value="REJECTED">REJECTED</option>
-                                                    <option value="ASSIGNED">ASSIGNED</option>
-                                                    <option value="CONTACTED">CONTACTED</option>
-                                                    <option value="QUALIFIED">QUALIFIED</option>
-                                                    <option value="QUOTATION_SENT">QUOTATION_SENT</option>
-                                                    <option value="FOLLOW_UP">FOLLOW_UP</option>
-                                                    <option value="LOST">LOST</option>
-                                                </select>
-                                            </div>
-                                            <div className="col-span-4">
-                                                <label className="block text-xs font-medium text-gray-700 mb-2">Interested In Products *</label>
-                                                <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                                                    <table className="w-full text-left text-xs">
-                                                        <thead className="bg-gray-100 border-b border-gray-200">
-                                                            <tr>
-                                                                <th className="px-3 py-2 font-semibold text-gray-600">Product</th>
-                                                                <th className="px-3 py-2 font-semibold text-gray-600 w-24">Quantity</th>
-                                                                <th className="px-3 py-2 font-semibold text-gray-600 w-24">Price</th>
-                                                                <th className="px-3 py-2 font-semibold text-gray-600 w-24">Total</th>
-                                                                {!isViewOnly && <th className="px-3 py-2 font-semibold text-gray-600 w-10"></th>}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-gray-200">
-                                                            {formData.interestedIn.map((item, idx) => {
-                                                                const product = availableProducts.find(p => p._id === item.item);
-                                                                const unitPrice = product?.basePrice || 0;
-                                                                const total = (item.quantity || 0) * unitPrice;
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4 border-t border-gray-100">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</p>
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-tighter ${formData.status === 'QUALIFIED' ? 'bg-green-100 text-green-700' :
+                                                formData.status === 'CONTACTED' ? 'bg-blue-100 text-blue-700' :
+                                                    formData.status === 'LOST' ? 'bg-red-100 text-red-700' :
+                                                        'bg-gray-100 text-gray-700'
+                                                }`}>
+                                                {formData.status}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Assigned To</p>
+                                            <p className="text-sm font-semibold text-gray-900">{salesPersons.find(sp => sp._id === formData.assignedTo)?.name || 'Unassigned'}</p>
+                                        </div>
+                                    </div>
 
-                                                                return (
-                                                                    <tr key={idx} className="bg-white">
-                                                                        <td className="px-3 py-2">
-                                                                            <span className="font-medium text-gray-900">
-                                                                                {product?.name || 'Unknown Item'}
-                                                                            </span>
-                                                                        </td>
-                                                                        <td className="px-3 py-2">
-                                                                            <input
-                                                                                type="number"
-                                                                                min="1"
-                                                                                disabled={isViewOnly || userRole === 'STAFF'}
-                                                                                value={item.quantity}
-                                                                                onChange={(e) => {
-                                                                                    const newQty = parseInt(e.target.value) || 0;
-                                                                                    const newInterestedIn = [...formData.interestedIn];
-                                                                                    newInterestedIn[idx] = { ...newInterestedIn[idx], quantity: newQty };
-                                                                                    setFormData({ ...formData, interestedIn: newInterestedIn });
-                                                                                }}
-                                                                                className="w-full border-gray-300 rounded text-xs py-1 px-2 focus:ring-blue-500 focus:border-blue-500"
-                                                                            />
-                                                                        </td>
-                                                                        <td className="px-3 py-2 text-gray-600">₹{(unitPrice || 0).toLocaleString()}</td>
-                                                                        <td className="px-3 py-2 font-medium text-gray-900">₹{(total || 0).toLocaleString()}</td>
-                                                                        {(!isViewOnly && userRole !== 'STAFF') && (
-                                                                            <td className="px-3 py-2 text-right">
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => {
-                                                                                        const newInterestedIn = formData.interestedIn.filter((_, i) => i !== idx);
-                                                                                        setFormData({ ...formData, interestedIn: newInterestedIn });
-                                                                                    }}
-                                                                                    className="text-red-500 hover:text-red-700 font-bold"
-                                                                                >
-                                                                                    &times;
-                                                                                </button>
-                                                                            </td>
-                                                                        )}
-                                                                    </tr>
-                                                                );
-                                                            })}
-                                                            {formData.interestedIn.length === 0 && (
-                                                                <tr>
-                                                                    <td colSpan={isViewOnly ? 4 : 5} className="px-3 py-4 text-center text-gray-500 italic">
-                                                                        No products added yet.
-                                                                    </td>
-                                                                </tr>
-                                                            )}
-                                                        </tbody>
-                                                        {(!isViewOnly && userRole !== 'STAFF') && (
-                                                            <tfoot className="bg-gray-50 border-t border-gray-200">
-                                                                <tr>
-                                                                    <td colSpan="5" className="p-2">
-                                                                        <select
-                                                                            className="w-full rounded border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
-                                                                            value=""
-                                                                            onChange={(e) => {
-                                                                                const val = e.target.value;
-                                                                                if (val) {
-                                                                                    const existing = formData.interestedIn.find(i => i.item === val);
-                                                                                    if (existing) {
-                                                                                        setFormData({
-                                                                                            ...formData,
-                                                                                            interestedIn: formData.interestedIn.map(i => i.item === val ? { ...i, quantity: i.quantity + 1 } : i)
-                                                                                        });
-                                                                                    } else {
-                                                                                        setFormData({
-                                                                                            ...formData,
-                                                                                            interestedIn: [...formData.interestedIn, { item: val, quantity: 1 }]
-                                                                                        });
-                                                                                    }
-                                                                                }
-                                                                            }}
-                                                                        >
-                                                                            <option value="">+ Add Product</option>
-                                                                            {availableProducts.map((p) => (
-                                                                                <option key={p._id} value={p._id}>
-                                                                                    {p.name} - ₹{p.basePrice}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
-                                                                    </td>
-                                                                </tr>
-                                                            </tfoot>
-                                                        )}
-                                                    </table>
-                                                </div>
-                                                <div className="flex justify-end mt-2 px-3">
-                                                    <div className="text-sm font-bold text-gray-900">
-                                                        Grand Total: <span className="text-blue-600">₹{
-                                                            (formData.interestedIn.reduce((acc, item) => {
+                                    <div className="space-y-3 pt-4 border-t border-gray-100">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Interested In Products</p>
+                                        <div className="bg-gray-50/50 rounded-xl border border-gray-100 overflow-hidden">
+                                            <table className="w-full text-left text-xs">
+                                                <thead className="bg-gray-50 border-b border-gray-100">
+                                                    <tr>
+                                                        <th className="px-4 py-2.5 font-bold text-gray-500 uppercase tracking-tighter">Product</th>
+                                                        <th className="px-4 py-2.5 font-bold text-gray-500 uppercase tracking-tighter text-center">Qty</th>
+                                                        <th className="px-4 py-2.5 font-bold text-gray-500 uppercase tracking-tighter text-right">Unit Price</th>
+                                                        <th className="px-4 py-2.5 font-bold text-gray-500 uppercase tracking-tighter text-right">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {formData.interestedIn.map((item, idx) => {
+                                                        const product = availableProducts.find(p => p._id === item.item);
+                                                        const unitPrice = product?.basePrice || 0;
+                                                        const total = (item.quantity || 0) * unitPrice;
+                                                        return (
+                                                            <tr key={idx}>
+                                                                <td className="px-4 py-3 font-semibold text-gray-900 uppercase tracking-tighter">{product?.name || 'Unknown'}</td>
+                                                                <td className="px-4 py-3 text-center font-bold text-gray-600">{item.quantity}</td>
+                                                                <td className="px-4 py-3 text-right text-gray-500 font-medium">₹{unitPrice.toLocaleString()}</td>
+                                                                <td className="px-4 py-3 text-right font-black text-gray-900 tracking-tighter">₹{total.toLocaleString()}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                                <tfoot className="bg-white/50">
+                                                    <tr>
+                                                        <td colSpan="3" className="px-4 py-3 text-right font-bold text-gray-500 uppercase text-[10px]">Grand Total</td>
+                                                        <td className="px-4 py-3 text-right font-black text-blue-600 text-sm tracking-tighter">
+                                                            ₹{(formData.interestedIn.reduce((acc, item) => {
                                                                 const product = availableProducts.find(p => p._id === item.item);
                                                                 return acc + ((item.quantity || 0) * (product?.basePrice || 0));
-                                                            }, 0) || 0).toLocaleString()
-                                                        }</span>
-                                                    </div>
+                                                            }, 0)).toLocaleString()}
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Address</p>
+                                            <p className="text-sm text-gray-700 leading-relaxed font-medium">{formData.customerData.address || 'No address provided'}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Remarks</p>
+                                            <p className="text-sm text-gray-700 leading-relaxed font-medium italic">"{formData.remarks || 'No remarks added'}"</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 pt-2 border-t justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={handleCloseModal}
+                                            className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    <fieldset className="contents">
+                                        {/* Row 1: Customer Details (4 Columns) */}
+                                        <div>
+                                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Customer Details</h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Customer Name *</label>
+                                                    <input
+                                                        type="text"
+                                                        name="name"
+                                                        required
+                                                        disabled={userRole === 'STAFF'}
+                                                        className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
+                                                        value={formData.customerData.name}
+                                                        onChange={handleCustomerChange}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Phone *</label>
+                                                    <input
+                                                        type="tel"
+                                                        name="contact"
+                                                        required
+                                                        disabled={userRole === 'STAFF'}
+                                                        className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
+                                                        value={formData.customerData.contact}
+                                                        onChange={handleCustomerChange}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                                                    <input
+                                                        type="email"
+                                                        name="email"
+                                                        disabled={userRole === 'STAFF'}
+                                                        className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
+                                                        value={formData.customerData.email}
+                                                        onChange={handleCustomerChange}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Contact Person</label>
+                                                    <input
+                                                        type="text"
+                                                        name="contactPerson"
+                                                        disabled={userRole === 'STAFF'}
+                                                        className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
+                                                        value={formData.customerData.contactPerson}
+                                                        onChange={handleCustomerChange}
+                                                    />
                                                 </div>
                                             </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Assign To</label>
-                                                <select
-                                                    name="assignedTo"
-                                                    disabled={userRole === 'STAFF'}
-                                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-50 disabled:text-gray-500"
-                                                    value={formData.assignedTo || ''}
-                                                    onChange={handleInputChange}
-                                                >
-                                                    <option value="">Unassigned</option>
-                                                    {salesPersons.map((sp) => (
-                                                        <option key={sp._id} value={sp._id}>{sp.name}</option>
-                                                    ))}
-                                                </select>
+                                        </div>
+
+                                        {/* Row 2: Lead Details (4 Columns) */}
+                                        <div>
+                                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Lead Information</h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Source *</label>
+                                                    <select
+                                                        name="source"
+                                                        required
+                                                        disabled={userRole === 'STAFF'}
+                                                        className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-50 disabled:text-gray-500"
+                                                        value={formData.source}
+                                                        onChange={handleInputChange}
+                                                    >
+                                                        <option value="WHATSAPP">WhatsApp</option>
+                                                        <option value="EMAIL">Email</option>
+                                                        <option value="REFERRAL">Referral</option>
+                                                        <option value="WEBSITE">Website</option>
+                                                        <option value="CALL">Call</option>
+                                                        <option value="OTHER">Other</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Status *</label>
+                                                    <select
+                                                        name="status"
+                                                        required
+                                                        className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-50 disabled:text-gray-500"
+                                                        value={formData.status}
+                                                        onChange={handleInputChange}
+                                                    >
+                                                        {!currentLead ? (
+                                                            // Creation Mode: Auto-filtered options
+                                                            formData.assignedTo ? (
+                                                                <option value="ASSIGNED">ASSIGNED</option>
+                                                            ) : (
+                                                                <option value="NEW">NEW</option>
+                                                            )
+                                                        ) : (
+                                                            // Edit Mode: Transition-based options
+                                                            (() => {
+                                                                const VALID_TRANSITIONS = {
+                                                                    NEW: ['ASSIGNED'],
+                                                                    ASSIGNED: ['CONTACTED', 'QUALIFIED', 'FOLLOW_UP', 'LOST'],
+                                                                    CONTACTED: ['QUALIFIED', 'FOLLOW_UP', 'LOST'],
+                                                                    QUALIFIED: ['FOLLOW_UP', 'LOST'],
+                                                                    QUOTATION_SENT: ['FOLLOW_UP', 'LOST'],
+                                                                    FOLLOW_UP: ['QUALIFIED', 'LOST'],
+                                                                };
+                                                                const currentStatus = currentLead.status || 'NEW';
+                                                                const nextStatuses = VALID_TRANSITIONS[currentStatus] || [];
+
+                                                                return (
+                                                                    <>
+                                                                        <option value={currentStatus}>{currentStatus}</option>
+                                                                        {nextStatuses.map((status) => (
+                                                                            <option key={status} value={status}>{status}</option>
+                                                                        ))}
+                                                                    </>
+                                                                );
+                                                            })()
+                                                        )}
+                                                    </select>
+                                                </div>
+                                                <div className="col-span-4">
+                                                    <label className="block text-xs font-medium text-gray-700 mb-2">Interested In Products *</label>
+                                                    <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-x-auto">
+                                                        <table className="w-full text-left text-xs">
+                                                            <thead className="bg-gray-100 border-b border-gray-200">
+                                                                <tr>
+                                                                    <th className="px-3 py-2 font-semibold text-gray-600">Product</th>
+                                                                    <th className="px-3 py-2 font-semibold text-gray-600 w-24">Quantity</th>
+                                                                    <th className="px-3 py-2 font-semibold text-gray-600 w-24">Price</th>
+                                                                    <th className="px-3 py-2 font-semibold text-gray-600 w-24">Total</th>
+                                                                    <th className="px-3 py-2 font-semibold text-gray-600 w-10"></th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-gray-200">
+                                                                {formData.interestedIn.map((item, idx) => {
+                                                                    const product = availableProducts.find(p => p._id === item.item);
+                                                                    const unitPrice = product?.basePrice || 0;
+                                                                    const total = (item.quantity || 0) * unitPrice;
+
+                                                                    return (
+                                                                        <tr key={idx} className="bg-white">
+                                                                            <td className="px-3 py-2">
+                                                                                <span className="font-medium text-gray-900">
+                                                                                    {product?.name || 'Unknown Item'}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className="px-3 py-2">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="1"
+                                                                                    disabled={userRole === 'STAFF'}
+                                                                                    value={item.quantity}
+                                                                                    onChange={(e) => {
+                                                                                        const newQty = parseInt(e.target.value) || 0;
+                                                                                        const newInterestedIn = [...formData.interestedIn];
+                                                                                        newInterestedIn[idx] = { ...newInterestedIn[idx], quantity: newQty };
+                                                                                        setFormData({ ...formData, interestedIn: newInterestedIn });
+                                                                                    }}
+                                                                                    className="w-full border-gray-300 rounded text-xs py-1 px-2 focus:ring-blue-500 focus:border-blue-500"
+                                                                                />
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-gray-600">₹{(unitPrice || 0).toLocaleString()}</td>
+                                                                            <td className="px-3 py-2 font-medium text-gray-900">₹{(total || 0).toLocaleString()}</td>
+                                                                            {(userRole !== 'STAFF') && (
+                                                                                <td className="px-3 py-2 text-right">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => {
+                                                                                            const newInterestedIn = formData.interestedIn.filter((_, i) => i !== idx);
+                                                                                            setFormData({ ...formData, interestedIn: newInterestedIn });
+                                                                                        }}
+                                                                                        className="text-red-500 hover:text-red-700 font-bold"
+                                                                                    >
+                                                                                        &times;
+                                                                                    </button>
+                                                                                </td>
+                                                                            )}
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                                {formData.interestedIn.length === 0 && (
+                                                                    <tr>
+                                                                        <td colSpan={5} className="px-3 py-4 text-center text-gray-500 italic">
+                                                                            No products added yet.
+                                                                        </td>
+                                                                    </tr>
+                                                                )}
+                                                            </tbody>
+                                                            {(userRole !== 'STAFF') && (
+                                                                <tfoot className="bg-gray-50 border-t border-gray-200">
+                                                                    <tr>
+                                                                        <td colSpan="5" className="p-2">
+                                                                            <select
+                                                                                className="w-full rounded border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                                                                                value=""
+                                                                                onChange={(e) => {
+                                                                                    const val = e.target.value;
+                                                                                    if (val) {
+                                                                                        const existing = formData.interestedIn.find(i => i.item === val);
+                                                                                        if (existing) {
+                                                                                            setFormData({
+                                                                                                ...formData,
+                                                                                                interestedIn: formData.interestedIn.map(i => i.item === val ? { ...i, quantity: i.quantity + 1 } : i)
+                                                                                            });
+                                                                                        } else {
+                                                                                            setFormData({
+                                                                                                ...formData,
+                                                                                                interestedIn: [...formData.interestedIn, { item: val, quantity: 1 }]
+                                                                                            });
+                                                                                        }
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                <option value="">+ Add Product</option>
+                                                                                {availableProducts.map((p) => (
+                                                                                    <option key={p._id} value={p._id}>
+                                                                                        {p.name} - ₹{p.basePrice}
+                                                                                    </option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </td>
+                                                                    </tr>
+                                                                </tfoot>
+                                                            )}
+                                                        </table>
+                                                    </div>
+                                                    <div className="flex justify-end mt-2 px-3">
+                                                        <div className="text-sm font-bold text-gray-900">
+                                                            Grand Total: <span className="text-blue-600">₹{
+                                                                (formData.interestedIn.reduce((acc, item) => {
+                                                                    const product = availableProducts.find(p => p._id === item.item);
+                                                                    return acc + ((item.quantity || 0) * (product?.basePrice || 0));
+                                                                }, 0) || 0).toLocaleString()
+                                                            }</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Assign To</label>
+                                                    <select
+                                                        name="assignedTo"
+                                                        disabled={userRole === 'STAFF'}
+                                                        className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-50 disabled:text-gray-500"
+                                                        value={formData.assignedTo || ''}
+                                                        onChange={handleInputChange}
+                                                    >
+                                                        <option value="">Unassigned</option>
+                                                        {salesPersons.map((sp) => (
+                                                            <option key={sp._id} value={sp._id}>{sp.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Row 3: Text Areas (Split) */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
-                                            <textarea
-                                                name="address"
-                                                rows="2"
-                                                disabled={userRole === 'STAFF'}
-                                                className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none resize-none disabled:bg-gray-50 disabled:text-gray-500"
-                                                value={formData.customerData.address}
-                                                onChange={handleCustomerChange}
-                                                placeholder="Enter full address..."
-                                            />
+                                        {/* Row 3: Text Areas (Split) */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
+                                                <textarea
+                                                    name="address"
+                                                    rows="2"
+                                                    disabled={userRole === 'STAFF'}
+                                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none resize-none disabled:bg-gray-50 disabled:text-gray-500"
+                                                    value={formData.customerData.address}
+                                                    onChange={handleCustomerChange}
+                                                    placeholder="Enter full address..."
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-700 mb-1">Remarks</label>
+                                                <textarea
+                                                    name="remarks"
+                                                    rows="2"
+                                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none resize-none disabled:bg-gray-50 disabled:text-gray-500"
+                                                    value={formData.remarks}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Internal notes..."
+                                                />
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">Remarks</label>
-                                            <textarea
-                                                name="remarks"
-                                                rows="2"
-                                                className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none resize-none disabled:bg-gray-50 disabled:text-gray-500"
-                                                value={formData.remarks}
-                                                onChange={handleInputChange}
-                                                placeholder="Internal notes..."
-                                            />
-                                        </div>
-                                    </div>
-                                </fieldset>
+                                    </fieldset>
 
-                                <div className="flex gap-3 pt-2 border-t justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={handleCloseModal}
-                                        className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
-                                    >
-                                        {isViewOnly ? 'Close' : 'Cancel'}
-                                    </button>
-                                    {!isViewOnly && (
+                                    <div className="flex gap-3 pt-2 border-t justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={handleCloseModal}
+                                            className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
                                         <button
                                             type="submit"
-                                            className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors"
+                                            className="px-8 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-bold transition-all shadow-md active:scale-95"
                                         >
-                                            {currentLead ? 'Save Changes' : 'Create Lead'}
+                                            {currentLead ? 'Update Lead' : 'Save Lead'}
                                         </button>
-                                    )}
-                                </div>
-                            </form>
+                                    </div>
+                                </form>
+                            )}
                         </div>
                     </div>
                 )}

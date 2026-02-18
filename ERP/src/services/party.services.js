@@ -93,7 +93,7 @@ export const getAllParties = async (filters = {}, pagination = {}) => {
             query.$or = [
                 { name: { $regex: filters.search, $options: 'i' } },
                 { email: { $regex: filters.search, $options: 'i' } },
-                { companyName: { $regex: filters.search, $options: 'i' } }
+                { contactPerson: { $regex: filters.search, $options: 'i' } }
             ];
         }
 
@@ -130,15 +130,16 @@ export const findOrCreateParty = async (partyData, createdBy) => {
     try {
         let party = null;
 
-        // Primary: Search by company name if provided
-        if (partyData.companyName && partyData.companyName.trim()) {
+        // Primary: Search by contact person if provided
+        if (partyData.contactPerson && partyData.contactPerson.trim()) {
             party = await Party.findOne({
-                companyName: { $regex: new RegExp(`^${partyData.companyName.trim()}$`, 'i') },
-                isActive: true
+                contactPerson: { $regex: new RegExp(`^${partyData.contactPerson.trim()}$`, 'i') },
+                contact: partyData.contact,
+                isActive: true // Keep isActive for consistency
             });
         }
 
-        // Fallback: Search by contact number if company name not found
+        // Fallback: Search by contact number if contact person not found
         if (!party && partyData.contact && partyData.contact.trim()) {
             party = await Party.findOne({
                 contact: partyData.contact.trim(),

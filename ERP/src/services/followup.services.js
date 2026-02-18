@@ -85,7 +85,7 @@ export const getUpcomingFollowups = async (salesPersonId = null) => {
                     },
                     {
                         path: 'customer',
-                        select: 'name companyName email contact'
+                        select: 'name contactPerson email contact'
                     }
                 ]
             })

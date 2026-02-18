@@ -8,7 +8,7 @@ import * as leadService from "../services/lead.services.js";
  * POST /api/leads
  */
 export const createLead = asyncHandler(async (req, res) => {
-    const { customerId, customerData, source, interestedIn, remarks } = req.body;
+    const { customerId, customerData, source, interestedIn, remarks, assignedTo } = req.body;
 
     // Validation
     if (!customerId && !customerData) {
@@ -16,7 +16,7 @@ export const createLead = asyncHandler(async (req, res) => {
     }
 
     if (customerData) {
-        if (!customerData.name || !customerData.contact || !customerData.email || !customerData.companyName || !customerData.address) {
+        if (!customerData.name || !customerData.contact || !customerData.email || !customerData.contactPerson || !customerData.address) {
             throw new ApiError(400, "All customer fields are required for new customers");
         }
     }
@@ -44,7 +44,8 @@ export const createLead = asyncHandler(async (req, res) => {
         customerData,
         source,
         interestedIn,
-        remarks
+        remarks,
+        assignedTo
     };
 
     const lead = await leadService.createLead(leadData, req.user._id);

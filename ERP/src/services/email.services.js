@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { EmailLog } from "../models/emailLog.models.js";
+import { generateQuotationPdf } from "../utils/quotationPdf.helper.js";
 
 // Create transporter (configure with your email service)
 const createTransporter = () => {
@@ -32,7 +33,7 @@ export const sendQuotationEmail = async (quotation, clientEmail, ccEmails = []) 
     const transporter = createTransporter();
 
     // Prepare email content
-    const subject = `Quotation ${quotation.quotationNo} - ${quotation.leadId.customer.companyName}`;
+    const subject = `Quotation ${quotation.quotationNo} - ${quotation.leadId.customer.contactPerson}`;
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -88,13 +89,21 @@ export const sendQuotationEmail = async (quotation, clientEmail, ccEmails = []) 
       </div>
     `;
 
+    // Generate PDF
+    const pdfBuffer = await generateQuotationPdf(quotation);
+
     // Send email
     const mailOptions = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: clientEmail,
       cc: ccEmails.length > 0 ? ccEmails.join(',') : undefined,
       subject: subject,
-      html: htmlContent
+      html: htmlContent,
+      attachments: [{
+        filename: `Quotation-${quotation.quotationNo}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
     };
 
     const info = await transporter.sendMail(mailOptions);

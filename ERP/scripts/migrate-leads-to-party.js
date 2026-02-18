@@ -1,13 +1,14 @@
 import mongoose from "mongoose";
 import { Lead } from "../src/models/leads.models.js";
 import { Party } from "../src/models/party.models.js";
+import { DB_NAME } from "../src/constant.js";
 import dotenv from "dotenv";
 
 dotenv.config({ path: './.env' });
 
 const migrateLeadsToParty = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
+        await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}?appName=Cluster0&replicaSet=atlas-s44awb-shard-0&ssl=true&authSource=admin`);
         console.log("Connected to MongoDB");
 
         const leads = await Lead.find({});
