@@ -12,6 +12,32 @@ import {
     calculateGrandTotal
 } from '../../../utils/quotationUtils'
 
+const BLANK_ITEM = { itemId: '', name: '', qty: 1, unitPrice: 0, total: 0 }
+
+/**
+ * Convert a lead's interestedIn array to quotation line items.
+ * Requires availableProducts to be loaded so prices can be filled in.
+ */
+const buildItemsFromLead = (lead, availableProducts) => {
+    if (!lead || !lead.interestedIn || lead.interestedIn.length === 0) {
+        return [{ ...BLANK_ITEM }]
+    }
+    const mapped = lead.interestedIn.map(interested => {
+        const itemId = interested.item?._id || interested.item
+        const product = availableProducts.find(p => p._id === itemId || p._id?.toString() === itemId?.toString())
+        const qty = interested.quantity || 1
+        const unitPrice = product?.basePrice || 0
+        return {
+            itemId: itemId || '',
+            name: product?.name || interested.item?.name || '',
+            qty,
+            unitPrice,
+            total: qty * unitPrice
+        }
+    })
+    return mapped.length > 0 ? mapped : [{ ...BLANK_ITEM }]
+}
+
 const QuotationModal = ({ isOpen, onClose, selectedLead = null, initialQuotation = null, mode = 'create' }) => {
     const [leads, setLeads] = useState([])
     const [availableProducts, setAvailableProducts] = useState([])
@@ -52,10 +78,11 @@ const QuotationModal = ({ isOpen, onClose, selectedLead = null, initialQuotation
                 notes: initialQuotation.notes || ''
             })
         } else if (mode === 'create') {
-            // Reset form for create mode
+            // Reset form for create mode, pre-populate items if selectedLead has interestedIn
+            const preItems = buildItemsFromLead(selectedLead, availableProducts)
             setFormData({
                 leadId: selectedLead?._id || '',
-                items: [{ itemId: '', name: '', qty: 1, unitPrice: 0, total: 0 }],
+                items: preItems,
                 additionalCharges: [],
                 discount: { type: 'PERCENTAGE', value: 0, amount: 0 },
                 tax: { type: 'GST', percentage: 18, amount: 0 },
@@ -63,6 +90,16 @@ const QuotationModal = ({ isOpen, onClose, selectedLead = null, initialQuotation
             })
         }
     }, [initialQuotation, mode, selectedLead])
+
+    // Re-apply pre-population once availableProducts has loaded (they load async)
+    useEffect(() => {
+        if (mode === 'create' && selectedLead && availableProducts.length > 0) {
+            const preItems = buildItemsFromLead(selectedLead, availableProducts)
+            if (preItems.length > 0) {
+                setFormData(prev => ({ ...prev, items: preItems }))
+            }
+        }
+    }, [availableProducts])
 
     const fetchInitialData = async () => {
         setIsLoading(true)
@@ -107,24 +144,14 @@ const QuotationModal = ({ isOpen, onClose, selectedLead = null, initialQuotation
     const handleLeadChange = (e) => {
         if (isViewMode) return;
         const leadId = e.target.value
-        setFormData({ ...formData, leadId })
 
         // Auto-populate items from lead's interestedIn only in create mode
         if (mode === 'create' && leadId) {
             const lead = leads.find(l => l._id === leadId)
-            if (lead && lead.interestedIn && lead.interestedIn.length > 0) {
-                const populatedItems = lead.interestedIn.map(interested => {
-                    const product = availableProducts.find(p => p._id === interested.item?._id || p._id === interested.item)
-                    return {
-                        itemId: interested.item?._id || interested.item,
-                        name: product?.name || '',
-                        qty: interested.quantity || 1,
-                        unitPrice: product?.basePrice || 0,
-                        total: (interested.quantity || 1) * (product?.basePrice || 0)
-                    }
-                })
-                setFormData(prev => ({ ...prev, leadId, items: populatedItems }))
-            }
+            const populatedItems = buildItemsFromLead(lead, availableProducts)
+            setFormData(prev => ({ ...prev, leadId, items: populatedItems }))
+        } else {
+            setFormData({ ...formData, leadId })
         }
     }
 
@@ -289,10 +316,10 @@ const QuotationModal = ({ isOpen, onClose, selectedLead = null, initialQuotation
                     <div className="flex items-center gap-4">
                         {isViewMode && (
                             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${initialQuotation?.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                                    initialQuotation?.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                                        initialQuotation?.status === 'SENT' ? 'bg-blue-100 text-blue-800' :
-                                            initialQuotation?.status === 'CONVERTED' ? 'bg-purple-100 text-purple-800' :
-                                                'bg-gray-100 text-gray-800'
+                                initialQuotation?.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                                    initialQuotation?.status === 'SENT' ? 'bg-blue-100 text-blue-800' :
+                                        initialQuotation?.status === 'CONVERTED' ? 'bg-purple-100 text-purple-800' :
+                                            'bg-gray-100 text-gray-800'
                                 }`}>
                                 {initialQuotation?.status}
                             </span>

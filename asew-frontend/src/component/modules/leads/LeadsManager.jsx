@@ -170,7 +170,8 @@ const LeadsManager = () => {
                     interestedIn: formData.interestedIn,
                     remarks: formData.remarks,
                     status: formData.status,
-                    assignedTo: formData.assignedTo
+                    assignedTo: formData.assignedTo,
+                    customerData: formData.customerData
                 }
                 await leadApi.updateLead(currentLead._id, updateData)
             } else {
@@ -279,7 +280,7 @@ const LeadsManager = () => {
                                             </button>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500">
-                                            {lead.hasApprovedQuotation ? (
+                                            {(lead.status === 'FOLLOW_UP' || lead.hasApprovedQuotation) ? (
                                                 <button
                                                     onClick={() => handleOpenFollowup(lead._id)}
                                                     className="text-yellow-600 hover:text-yellow-800 font-medium"

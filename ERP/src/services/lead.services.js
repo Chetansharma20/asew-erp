@@ -3,9 +3,7 @@ import { User } from "../models/users.models.js";
 import { generateLeadNumber } from "../utils/autoNumber.helper.js";
 import { ApiError } from "../utils/ApiError.js";
 
-import { findOrCreateParty } from "./party.services.js";
-import { createQuotation } from "./quotation.services.js";
-import { Quotation } from "../models/quotation.models.js";
+import { findOrCreateParty, updateParty } from "./party.services.js";
 
 /**
  * Create new lead
@@ -87,6 +85,11 @@ export const updateLead = async (leadId, updateData) => {
         if (updateData.interestedIn) lead.interestedIn = updateData.interestedIn;
         if (updateData.remarks) lead.remarks = updateData.remarks;
         if (updateData.assignedTo) lead.assignedTo = updateData.assignedTo;
+
+        // Update the linked Party document if customerData is provided
+        if (updateData.customerData && lead.customer) {
+            await updateParty(lead.customer.toString(), updateData.customerData);
+        }
 
         // Save non-status changes first
         await lead.save();
@@ -423,62 +426,8 @@ export async function updateLeadStatus(leadId, status) {
             throw new ApiError(400, `Invalid status transition from ${lead.status} to ${status}`);
         }
 
-        const oldStatus = lead.status;
         lead.status = status;
         await lead.save();
-
-        // Auto-create quotation if status is QUALIFIED
-        if (status === "QUALIFIED") {
-            try {
-                // Check if quotation already exists
-                const existingQuotation = await Quotation.findOne({ leadId: lead._id });
-
-                if (!existingQuotation) {
-                    // Populate existing lead to get product details
-                    // We need to fetch fresh copy or populate the existing document
-                    // Since lead is already a mongoose document, we can use populate on it directly?
-                    // But easier to findById again to ensure clean state or just use what we have if populated.
-                    // Let's stick to safe pattern:
-                    const populatedLead = await Lead.findById(leadId).populate('interestedIn.item');
-
-                    if (!populatedLead.assignedTo) {
-                        throw new Error(`Lead #${populatedLead.leadNo} does not have an assigned salesperson. Please assign one before qualifying.`);
-                    }
-
-                    const quotationItems = populatedLead.interestedIn
-                        .filter(i => i.item && i.item._id)
-                        .map(interested => ({
-                            itemId: interested.item._id,
-                            quantity: interested.quantity || 1,
-                            UnitPrice: interested.item.basePrice || 0,
-                            Total: (interested.quantity || 1) * (interested.item.basePrice || 0)
-                        }));
-
-                    if (quotationItems.length === 0) {
-                        throw new Error(`Lead #${populatedLead.leadNo} has no products specified. Please add items before qualifying.`);
-                    }
-
-                    const quotationData = {
-                        quotationItems,
-                        additionalCharges: [],
-                        discount: { type: 'Percentage', value: 0, amount: 0 },
-                        tax: { type: 'GST', percentage: 18, amount: 0 },
-                        notes: `Auto-generated quotation for Lead #${populatedLead.leadNo}`,
-                        validTill: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-                    };
-
-                    await createQuotation(leadId, quotationData, populatedLead.assignedTo);
-                }
-            } catch (err) {
-                console.error("Auto-quotation failed:", err);
-
-                // Rollback status change
-                lead.status = oldStatus;
-                await lead.save();
-
-                throw new ApiError(400, `Auto-quotation failed: ${err.message}`);
-            }
-        }
 
         return await Lead.findById(leadId)
             .populate('interestedIn.item', 'name description basePrice')

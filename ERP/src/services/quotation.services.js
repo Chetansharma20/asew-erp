@@ -142,9 +142,9 @@ export const sendQuotation = async (quotationId, ccEmails = []) => {
         quotation.emailSentTo = clientEmail;
         await quotation.save();
 
-        // Update lead status
+        // Update lead status to QUOTATION_SENT once email is sent
         await Lead.findByIdAndUpdate(quotation.leadId._id, {
-            status: "FOLLOW_UP"
+            status: "QUOTATION_SENT"
         });
 
         return quotation;
@@ -324,7 +324,7 @@ export const updateQuotationStatus = async (quotationId, status) => {
         // Update lead status
         if (status === "APPROVED") {
             await Lead.findByIdAndUpdate(quotation.leadId, {
-                status: "QUOTATION_SENT"
+                status: "FOLLOW_UP"
             });
         }
 
