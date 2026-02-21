@@ -30,7 +30,6 @@ const leadSchema = new mongoose.Schema(
         "CONTACTED",
         "QUALIFIED",
         "QUOTATION_SENT",
-        "FOLLOW_UP",
         "CONVERTED_TO_ORDER",
         "LOST"
       ],

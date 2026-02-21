@@ -17,6 +17,12 @@ const QuotationsManager = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [bannerCollapsed, setBannerCollapsed] = useState(false)
 
+    // Rejection remark modal state
+    const [showRejectModal, setShowRejectModal] = useState(false)
+    const [rejectRemark, setRejectRemark] = useState('')
+    const [rejectingQuotationId, setRejectingQuotationId] = useState(null)
+    const [isRejecting, setIsRejecting] = useState(false)
+
     useEffect(() => {
         fetchInitialData()
 
@@ -279,13 +285,26 @@ const QuotationsManager = () => {
                                                     onChange={async (e) => {
                                                         const newStatus = e.target.value
                                                         if (!newStatus || newStatus === 'SENT') return
-                                                        const label = newStatus === 'APPROVED' ? 'Approve' : 'Reject'
-                                                        if (!window.confirm(`${label} this quotation?`)) return
+
+                                                        if (newStatus === 'REJECTED') {
+                                                            // Open rejection remark modal
+                                                            setRejectingQuotationId(quotation._id)
+                                                            setRejectRemark('')
+                                                            setShowRejectModal(true)
+                                                            e.target.value = 'SENT' // Reset dropdown
+                                                            return
+                                                        }
+
+                                                        // APPROVED flow — keep existing confirm
+                                                        if (!window.confirm('Approve this quotation?')) {
+                                                            e.target.value = 'SENT'
+                                                            return
+                                                        }
                                                         try {
                                                             await quotationApi.updateQuotationStatus(quotation._id, newStatus)
                                                             fetchInitialData()
                                                         } catch (err) {
-                                                            alert(err?.message || `Failed to ${label.toLowerCase()} quotation`)
+                                                            alert(err?.message || 'Failed to approve quotation')
                                                         }
                                                     }}
                                                     className="text-xs font-semibold rounded-lg px-2.5 py-1.5 border border-blue-300 bg-blue-50 text-blue-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -295,9 +314,16 @@ const QuotationsManager = () => {
                                                     <option value="REJECTED">REJECTED</option>
                                                 </select>
                                             ) : (
-                                                <span className={`text-xs font-medium rounded-full px-2.5 py-0.5 border flex w-fit items-center gap-1 ${getStatusBadgeColor(quotation.status)}`}>
-                                                    {quotation.status}
-                                                </span>
+                                                <div>
+                                                    <span className={`text-xs font-medium rounded-full px-2.5 py-0.5 border flex w-fit items-center gap-1 ${getStatusBadgeColor(quotation.status)}`}>
+                                                        {quotation.status}
+                                                    </span>
+                                                    {quotation.status === 'REJECTED' && quotation.rejectionRemark && (
+                                                        <p className="text-xs text-red-600 mt-1 max-w-[200px] truncate" title={quotation.rejectionRemark}>
+                                                            Remark: {quotation.rejectionRemark}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500">
@@ -387,6 +413,68 @@ const QuotationsManager = () => {
                 selectedLead={selectedLead}
                 mode={modalMode}
             />
+
+            {/* Rejection Remark Modal */}
+            {showRejectModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowRejectModal(false)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">Reject Quotation</h3>
+                                <p className="text-sm text-gray-500">Please provide a reason for rejection</p>
+                            </div>
+                        </div>
+
+                        <textarea
+                            value={rejectRemark}
+                            onChange={(e) => setRejectRemark(e.target.value)}
+                            placeholder="Enter rejection remark..."
+                            rows={4}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none"
+                            autoFocus
+                        />
+
+                        <div className="flex justify-end gap-3 mt-4">
+                            <button
+                                onClick={() => {
+                                    setShowRejectModal(false)
+                                    setRejectRemark('')
+                                    setRejectingQuotationId(null)
+                                }}
+                                disabled={isRejecting}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setIsRejecting(true)
+                                    try {
+                                        await quotationApi.updateQuotationStatus(rejectingQuotationId, 'REJECTED', rejectRemark.trim())
+                                        setShowRejectModal(false)
+                                        setRejectRemark('')
+                                        setRejectingQuotationId(null)
+                                        fetchInitialData()
+                                    } catch (err) {
+                                        alert(err?.message || 'Failed to reject quotation')
+                                    } finally {
+                                        setIsRejecting(false)
+                                    }
+                                }}
+                                disabled={!rejectRemark.trim() || isRejecting}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isRejecting ? 'Rejecting...' : 'Confirm Reject'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

@@ -60,6 +60,10 @@ const quotationSchema = new mongoose.Schema(
             enum: ["CREATED", "SENT", "APPROVED", "REJECTED", "CONVERTED"],
             default: "CREATED"
         },
+        rejectionRemark: {
+            type: String,
+            trim: true
+        },
         totalAmount: {
             type: Number,
             required: true

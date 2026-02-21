@@ -51,9 +51,9 @@ export const sendQuotationEmail = async (id) => {
 };
 
 // Update quotation status
-export const updateQuotationStatus = async (id, status) => {
+export const updateQuotationStatus = async (id, status, remark) => {
     try {
-        const response = await axiosInstance.patch(`/quotations/updatequotationstatus/${id}`, { status });
+        const response = await axiosInstance.patch(`/quotations/updatequotationstatus/${id}`, { status, remark });
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message;

@@ -20,6 +20,11 @@ export const createItem = asyncHandler(async (req, res) => {
         basePrice
     };
 
+    // Attach image path if file was uploaded
+    if (req.file) {
+        itemData.image = `/uploads/items/${req.file.filename}`;
+    }
+
     const item = await itemService.createItem(itemData);
 
     return res.status(201).json(
@@ -34,6 +39,11 @@ export const createItem = asyncHandler(async (req, res) => {
 export const updateItem = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
+
+    // Attach new image path if file was uploaded
+    if (req.file) {
+        updateData.image = `/uploads/items/${req.file.filename}`;
+    }
 
     const item = await itemService.updateItem(id, updateData);
 

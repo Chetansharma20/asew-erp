@@ -4,6 +4,8 @@ import { getItemById } from '../../../api/itemApi'
 import { toast } from 'react-hot-toast'
 import { ArrowLeft } from 'lucide-react'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const ItemDetails = () => {
     const { id } = useParams()
     const navigate = useNavigate()
@@ -54,6 +56,17 @@ const ItemDetails = () => {
             </button>
 
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                {/* Item Image Banner */}
+                {item.image && (
+                    <div className="w-full bg-gray-50 flex justify-center border-b border-gray-100">
+                        <img
+                            src={`${API_BASE}${item.image}`}
+                            alt={item.name}
+                            className="max-h-72 object-contain p-4"
+                        />
+                    </div>
+                )}
+
                 <div className="p-8 border-b border-gray-100">
                     <div className="flex justify-between items-start">
                         <div>

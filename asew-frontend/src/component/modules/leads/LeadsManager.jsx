@@ -39,7 +39,6 @@ const LeadsManager = () => {
         'CONTACTED': 'bg-indigo-100 text-indigo-800',
         'QUALIFIED': 'bg-emerald-100 text-emerald-800',
         'QUOTATION_SENT': 'bg-cyan-100 text-cyan-800',
-        'FOLLOW_UP': 'bg-yellow-100 text-yellow-800',
         'CONVERTED_TO_ORDER': 'bg-emerald-100 text-emerald-800',
         'LOST': 'bg-stone-100 text-stone-800'
     }
@@ -288,7 +287,7 @@ const LeadsManager = () => {
                                             </button>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500">
-                                            {(lead.status === 'FOLLOW_UP' || lead.hasApprovedQuotation) ? (
+                                            {(lead.status === 'QUOTATION_SENT' || lead.hasApprovedQuotation) ? (
                                                 <button
                                                     onClick={() => handleOpenFollowup(lead._id)}
                                                     className="text-yellow-600 hover:text-yellow-800 font-medium"
@@ -545,11 +544,10 @@ const LeadsManager = () => {
                                                             (() => {
                                                                 const VALID_TRANSITIONS = {
                                                                     NEW: ['ASSIGNED'],
-                                                                    ASSIGNED: ['CONTACTED', 'QUALIFIED', 'FOLLOW_UP', 'LOST'],
-                                                                    CONTACTED: ['QUALIFIED', 'FOLLOW_UP', 'LOST'],
-                                                                    QUALIFIED: ['FOLLOW_UP', 'LOST'],
-                                                                    QUOTATION_SENT: ['FOLLOW_UP', 'LOST'],
-                                                                    FOLLOW_UP: ['QUALIFIED', 'LOST'],
+                                                                    ASSIGNED: ['CONTACTED', 'LOST'],
+                                                                    CONTACTED: ['QUALIFIED', 'LOST'],
+                                                                    QUALIFIED: ['QUOTATION_SENT', 'LOST'],
+                                                                    QUOTATION_SENT: ['CONVERTED_TO_ORDER', 'LOST'],
                                                                 };
                                                                 const currentStatus = currentLead.status || 'NEW';
                                                                 const nextStatuses = VALID_TRANSITIONS[currentStatus] || [];

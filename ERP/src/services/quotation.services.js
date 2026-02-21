@@ -143,10 +143,9 @@ export const sendQuotation = async (quotationId, ccEmails = []) => {
         quotation.emailSentTo = clientEmail;
         await quotation.save();
 
-        // Update lead status to FOLLOW_UP once email is sent
-        // (The user wants follow-up to start immediately upon sending)
+        // Update lead status to QUOTATION_SENT once email is sent
         await Lead.findByIdAndUpdate(quotation.leadId._id, {
-            status: "FOLLOW_UP"
+            status: "QUOTATION_SENT"
         });
 
         return quotation;
@@ -297,13 +296,13 @@ export const updateQuotation = async (quotationId, updateData) => {
 
 /**
  * Update quotation status
- // ... (rest of file)
  * @param {string} quotationId - Quotation ID
  * @param {string} status - New status (APPROVED, REJECTED)
  * @param {string} userId - User ID performing the update
+ * @param {string} remark - Rejection remark (required for REJECTED)
  * @returns {Promise<Object>} - Updated quotation
  */
-export const updateQuotationStatus = async (quotationId, status, userId) => {
+export const updateQuotationStatus = async (quotationId, status, userId, remark) => {
     try {
         const validStatuses = ["CREATED", "SENT", "APPROVED", "REJECTED", "CONVERTED"];
         if (!validStatuses.includes(status)) {
@@ -339,6 +338,14 @@ export const updateQuotationStatus = async (quotationId, status, userId) => {
         }
 
         quotation.status = status;
+
+        // Save rejection remark when rejecting, clear it otherwise
+        if (status === "REJECTED") {
+            quotation.rejectionRemark = remark;
+        } else {
+            quotation.rejectionRemark = undefined;
+        }
+
         await quotation.save();
 
         return await Quotation.findById(quotationId)

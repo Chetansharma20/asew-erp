@@ -391,7 +391,7 @@ export async function updateLeadStatus(leadId, status) {
         const validStatuses = [
             "NEW", "APPROVED", "REJECTED", "ASSIGNED",
             "CONTACTED", "QUALIFIED", "LOST",
-            "FOLLOW_UP", "CONVERTED_TO_ORDER"
+            "QUOTATION_SENT", "CONVERTED_TO_ORDER"
         ];
 
         if (!validStatuses.includes(status)) {
@@ -407,13 +407,11 @@ export async function updateLeadStatus(leadId, status) {
         const VALID_TRANSITIONS = {
             NEW: ["APPROVED", "REJECTED", "ASSIGNED"],
             APPROVED: ["ASSIGNED", "REJECTED"],
-            ASSIGNED: ["CONTACTED", "QUALIFIED", "LOST", "FOLLOW_UP", "CLIENT_APPROVAL_PENDING", "REJECTED"],
-            CONTACTED: ["QUALIFIED", "LOST", "FOLLOW_UP", "REJECTED"],
-            QUALIFIED: ["QUOTATION_SENT", "FOLLOW_UP", "LOST", "REJECTED"], // QUOTATION_SENT if applicable later
+            ASSIGNED: ["CONTACTED", "LOST"],
+            CONTACTED: ["QUALIFIED", "LOST"],
+            QUALIFIED: ["QUOTATION_SENT", "LOST"],
+            QUOTATION_SENT: ["CONVERTED_TO_ORDER", "LOST"],
             LOST: [], // Terminal state
-            FOLLOW_UP: ["CLIENT_APPROVAL_PENDING", "REJECTED", "CONVERTED_TO_ORDER", "QUALIFIED", "LOST"],
-            CLIENT_APPROVAL_PENDING: ["APPROVED_BY_CLIENT", "FOLLOW_UP", "REJECTED", "LOST"],
-            APPROVED_BY_CLIENT: ["CONVERTED_TO_ORDER", "REJECTED"],
             REJECTED: [], // Terminal state
             CONVERTED_TO_ORDER: [] // Terminal state
         };

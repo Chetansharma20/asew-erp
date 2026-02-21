@@ -24,12 +24,6 @@ export const createFollowup = async (leadId, remarks, nextFollowupDate, orderSta
             orderStatus: orderStatus || "PRECLOSED"
         });
 
-        // Update lead status to FOLLOW_UP if not already
-        if (lead.status !== "FOLLOW_UP" && lead.status !== "CLIENT_APPROVAL_PENDING") {
-            lead.status = "FOLLOW_UP";
-            await lead.save();
-        }
-
         return await Followup.findById(followup._id).populate('lead');
 
     } catch (error) {

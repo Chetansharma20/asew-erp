@@ -118,13 +118,17 @@ export const updateQuotation = asyncHandler(async (req, res) => {
  */
 export const updateQuotationStatus = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, remark } = req.body;
 
     if (!status) {
         throw new ApiError(400, "Status is required");
     }
 
-    const quotation = await quotationService.updateQuotationStatus(id, status, req.user._id);
+    if (status === "REJECTED" && (!remark || !remark.trim())) {
+        throw new ApiError(400, "Rejection remark is required when rejecting a quotation");
+    }
+
+    const quotation = await quotationService.updateQuotationStatus(id, status, req.user._id, remark);
 
     return res.status(200).json(
         new ApiResponse(200, quotation, "Quotation status updated successfully")

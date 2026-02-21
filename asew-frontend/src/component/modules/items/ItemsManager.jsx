@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { getAllItems, createItem, updateItem, deleteItem, getItemById } from '../../../api/itemApi'
 import { toast } from 'react-hot-toast'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const ItemsManager = () => {
     const location = useLocation()
@@ -22,6 +23,8 @@ const ItemsManager = () => {
         basePrice: '',
         isActive: true
     })
+    const [imageFile, setImageFile] = useState(null)
+    const [imagePreview, setImagePreview] = useState(null)
 
     const fetchItems = async () => {
         try {
@@ -48,16 +51,21 @@ const ItemsManager = () => {
         if (item) {
             setCurrentItem(item)
             setFormData(item)
+            setImagePreview(item.image ? `${API_BASE}${item.image}` : null)
         } else {
             setCurrentItem(null)
             setFormData({ name: '', description: '', quantity: '', price: '', basePrice: '', isActive: true })
+            setImagePreview(null)
         }
+        setImageFile(null)
         setIsModalOpen(true)
     }
 
     const handleCloseModal = () => {
         setIsModalOpen(false)
         setCurrentItem(null)
+        setImageFile(null)
+        setImagePreview(null)
     }
 
     const handleInputChange = (e) => {
@@ -65,16 +73,32 @@ const ItemsManager = () => {
         setFormData({ ...formData, [name]: value })
     }
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0]
+        if (file) {
+            setImageFile(file)
+            setImagePreview(URL.createObjectURL(file))
+        }
+    }
+
+    const handleRemoveImage = () => {
+        setImageFile(null)
+        setImagePreview(null)
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         try {
             let response
+            const payload = { ...formData }
+            if (imageFile) {
+                payload.imageFile = imageFile
+            }
+
             if (currentItem) {
-                // Update
-                response = await updateItem(currentItem._id, formData)
+                response = await updateItem(currentItem._id, payload)
             } else {
-                // Add
-                response = await createItem(formData)
+                response = await createItem(payload)
             }
 
             if (response.success) {
@@ -154,6 +178,7 @@ const ItemsManager = () => {
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 border-b border-gray-100">
                             <tr>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Image</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Base Price (₹)</th>
@@ -165,6 +190,21 @@ const ItemsManager = () => {
                             {items.length > 0 ? (
                                 items.map((item) => (
                                     <tr key={item._id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            {item.image ? (
+                                                <img
+                                                    src={`${API_BASE}${item.image}`}
+                                                    alt={item.name}
+                                                    className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                        </td>
                                         <td className="px-6 py-4 text-sm font-medium">
                                             <Link
                                                 to={`${location.pathname}/${item._id}`}
@@ -205,7 +245,7 @@ const ItemsManager = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                                         No items found. Add one to get started.
                                     </td>
                                 </tr>
@@ -215,7 +255,7 @@ const ItemsManager = () => {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Add/Edit Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
@@ -223,6 +263,41 @@ const ItemsManager = () => {
                             {currentItem ? 'Edit Item' : 'Add New Item'}
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Image Upload */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Item Image</label>
+                                {imagePreview ? (
+                                    <div className="relative group w-full">
+                                        <img
+                                            src={imagePreview}
+                                            alt="Preview"
+                                            className="w-full h-40 object-cover rounded-lg border border-gray-200"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleRemoveImage}
+                                            className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center text-sm hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+                                        <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        <span className="text-sm text-gray-500">Click to upload image</span>
+                                        <span className="text-xs text-gray-400 mt-0.5">JPG, PNG, WEBP (max 5MB)</span>
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
+                            </div>
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                                 <input
@@ -303,6 +378,16 @@ const ItemsManager = () => {
                             </div>
                         ) : viewItem ? (
                             <div className="space-y-4">
+                                {/* Item Image */}
+                                {viewItem.image && (
+                                    <div className="flex justify-center mb-4">
+                                        <img
+                                            src={`${API_BASE}${viewItem.image}`}
+                                            alt={viewItem.name}
+                                            className="max-w-full h-48 object-cover rounded-xl border border-gray-200"
+                                        />
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="text-gray-500 font-medium">Name:</div>
                                     <div className="col-span-2 text-gray-900 font-medium">{viewItem.name}</div>
