@@ -40,6 +40,7 @@ const LeadsManager = () => {
         'QUALIFIED': 'bg-emerald-100 text-emerald-800',
         'QUOTATION_SENT': 'bg-cyan-100 text-cyan-800',
         'FOLLOW_UP': 'bg-yellow-100 text-yellow-800',
+        'CONVERTED_TO_ORDER': 'bg-emerald-100 text-emerald-800',
         'LOST': 'bg-stone-100 text-stone-800'
     }
 
@@ -78,12 +79,12 @@ const LeadsManager = () => {
             setFormData({
                 ...lead,
                 customerId: lead.customer?._id || '',
-                customerData: lead.customer || {
-                    name: '',
-                    contact: '',
-                    email: '',
-                    companyName: '',
-                    address: ''
+                customerData: {
+                    name: lead.customer?.name || '',
+                    contact: lead.customer?.contact || '',
+                    email: lead.customer?.email || '',
+                    contactPerson: lead.customer?.contactPerson || '',
+                    address: lead.customer?.address || ''
                 },
                 interestedIn: (lead.interestedIn || []).map(i => ({
                     item: i.item?._id || i.item,
@@ -175,8 +176,15 @@ const LeadsManager = () => {
                 }
                 await leadApi.updateLead(currentLead._id, updateData)
             } else {
-                // Add
-                await leadApi.createLead(formData)
+                // Add - strip empty assignedTo to avoid Mongoose ObjectId CastError
+                // Also strip empty email to avoid Party model regex validation failure
+                const createData = { ...formData };
+                if (!createData.assignedTo) delete createData.assignedTo;
+                if (createData.customerData && !createData.customerData.email) {
+                    const { email, ...rest } = createData.customerData;
+                    createData.customerData = rest;
+                }
+                await leadApi.createLead(createData)
             }
             fetchInitialData() // Refresh list
             handleCloseModal()

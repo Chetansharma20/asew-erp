@@ -16,8 +16,8 @@ export const createLead = asyncHandler(async (req, res) => {
     }
 
     if (customerData) {
-        if (!customerData.name || !customerData.contact || !customerData.email || !customerData.contactPerson || !customerData.address) {
-            throw new ApiError(400, "All customer fields are required for new customers");
+        if (!customerData.name || !customerData.contact) {
+            throw new ApiError(400, "Customer name and contact are required");
         }
     }
 

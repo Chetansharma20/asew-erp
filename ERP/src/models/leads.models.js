@@ -31,6 +31,7 @@ const leadSchema = new mongoose.Schema(
         "QUALIFIED",
         "QUOTATION_SENT",
         "FOLLOW_UP",
+        "CONVERTED_TO_ORDER",
         "LOST"
       ],
       default: "NEW"

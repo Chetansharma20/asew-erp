@@ -391,8 +391,7 @@ export async function updateLeadStatus(leadId, status) {
         const validStatuses = [
             "NEW", "APPROVED", "REJECTED", "ASSIGNED",
             "CONTACTED", "QUALIFIED", "LOST",
-            "FOLLOW_UP", "CLIENT_APPROVAL_PENDING",
-            "APPROVED_BY_CLIENT", "CONVERTED_TO_ORDER"
+            "FOLLOW_UP", "CONVERTED_TO_ORDER"
         ];
 
         if (!validStatuses.includes(status)) {

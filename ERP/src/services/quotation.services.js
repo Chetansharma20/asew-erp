@@ -3,6 +3,7 @@ import { Lead } from "../models/leads.models.js";
 import { generateQuotationNumber } from "../utils/autoNumber.helper.js";
 import { sendQuotationEmail } from "./email.services.js";
 import { ApiError } from "../utils/ApiError.js";
+import { convertQuotationToOrder } from "./conversion.services.js";
 
 /**
  * Create quotation for a lead
@@ -142,9 +143,10 @@ export const sendQuotation = async (quotationId, ccEmails = []) => {
         quotation.emailSentTo = clientEmail;
         await quotation.save();
 
-        // Update lead status to QUOTATION_SENT once email is sent
+        // Update lead status to FOLLOW_UP once email is sent
+        // (The user wants follow-up to start immediately upon sending)
         await Lead.findByIdAndUpdate(quotation.leadId._id, {
-            status: "QUOTATION_SENT"
+            status: "FOLLOW_UP"
         });
 
         return quotation;
@@ -298,9 +300,10 @@ export const updateQuotation = async (quotationId, updateData) => {
  // ... (rest of file)
  * @param {string} quotationId - Quotation ID
  * @param {string} status - New status (APPROVED, REJECTED)
+ * @param {string} userId - User ID performing the update
  * @returns {Promise<Object>} - Updated quotation
  */
-export const updateQuotationStatus = async (quotationId, status) => {
+export const updateQuotationStatus = async (quotationId, status, userId) => {
     try {
         const validStatuses = ["CREATED", "SENT", "APPROVED", "REJECTED", "CONVERTED"];
         if (!validStatuses.includes(status)) {
@@ -312,21 +315,31 @@ export const updateQuotationStatus = async (quotationId, status) => {
             throw new ApiError(404, "Quotation not found");
         }
 
-        // Only allow manual status changes for SENT quotations (to APPROVED/REJECTED)
-        // CONVERTED status is set automatically by the system
-        if (quotation.status !== "SENT" && status !== "CONVERTED") {
+        // Check if already converted (idempotency guard)
+        if (quotation.status === "CONVERTED") {
+            return await Quotation.findById(quotationId)
+                .populate('leadId')
+                .populate('salesPersonId', 'name email')
+                .populate('quotationItems.itemId', 'name description unit');
+        }
+
+        // Only allow status changes for SENT quotations (to APPROVED/REJECTED)
+        // Also allow APPROVED quotations to be re-processed (retry scenario)
+        const allowedCurrentStatuses = status === "APPROVED" ? ["SENT", "APPROVED"] : ["SENT"];
+        if (!allowedCurrentStatuses.includes(quotation.status) && status !== "CONVERTED") {
             throw new ApiError(400, `Cannot update status. Quotation must be SENT to change to APPROVED/REJECTED. Current status: ${quotation.status}`);
+        }
+
+        // If status is APPROVED, trigger automatic conversion to order
+        if (status === "APPROVED") {
+            // No need to save APPROVED first anymore
+            // conversion.services.js handles APPROVED → CONVERTED in one transaction
+            const order = await convertQuotationToOrder(quotationId, userId);
+            return order;
         }
 
         quotation.status = status;
         await quotation.save();
-
-        // Update lead status
-        if (status === "APPROVED") {
-            await Lead.findByIdAndUpdate(quotation.leadId, {
-                status: "FOLLOW_UP"
-            });
-        }
 
         return await Quotation.findById(quotationId)
             .populate('leadId')

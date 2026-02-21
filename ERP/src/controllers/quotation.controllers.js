@@ -124,7 +124,7 @@ export const updateQuotationStatus = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Status is required");
     }
 
-    const quotation = await quotationService.updateQuotationStatus(id, status);
+    const quotation = await quotationService.updateQuotationStatus(id, status, req.user._id);
 
     return res.status(200).json(
         new ApiResponse(200, quotation, "Quotation status updated successfully")
